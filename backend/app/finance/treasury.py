@@ -17,7 +17,7 @@ from decimal import Decimal
 from typing import Any
 
 from app.categories import BY_KEY
-from app.extraction.text import name_key
+from app.extraction.text import fold, name_key
 from app.finance.data import ZERO, Dataset, f, money
 from app.models import BankTransaction
 
@@ -277,8 +277,10 @@ def forecast(ds: Dataset) -> dict[str, Any]:
         while nxt <= end:
             label = BY_KEY[rec["category"]].label if rec["category"] in BY_KEY else rec["label"]
             who = re.sub(r"^(PRLV|VIR|PRELEVEMENT|VIREMENT)( SEPA)?\s+", "", rec["label"], flags=re.I)
-            who = re.sub(r"\s+\S*\d\S*$", "", who)[:40]
-            event(nxt, f"{label} · {who}", -rec["amount"], "recurring", "estimated")
+            words = [w for w in who.split() if not re.search(r"\d", w) and fold(w) not in MONTH_WORDS]
+            who = " ".join(words)[:40]
+            redundant = not who or all(fold(w).rstrip("s") in fold(label) for w in words)
+            event(nxt, label if redundant else f"{label} · {who}", -rec["amount"], "recurring", "estimated")
             recurring_total += rec["amount"]
             nxt = _add_months(nxt, rec["period_months"])
     components.append(

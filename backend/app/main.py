@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 
 from app import __version__
-from app.api import audit, auth, companies, documents, finance, health, setup, users
+from app.api import actions, advisor, audit, auth, companies, documents, finance, health, setup, users
 from app.config import get_settings
 
 
@@ -15,7 +15,7 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json" if settings.debug else None,
     )
     api = APIRouter(prefix="/api")
-    for module in (health, setup, auth, companies, users, audit, documents, finance):
+    for module in (health, setup, auth, companies, users, audit, documents, finance, advisor, actions):
         api.include_router(module.router)
     app.include_router(api)
     return app

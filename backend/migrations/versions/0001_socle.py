@@ -92,9 +92,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_audit_events")),
     )
-    op.create_index(
-        op.f("ix_audit_events_occurred_at"), "audit_events", ["occurred_at"], unique=False
-    )
+    op.create_index(op.f("ix_audit_events_occurred_at"), "audit_events", ["occurred_at"], unique=False)
     op.create_table(
         "memberships",
         sa.Column("user_id", sa.Uuid(), nullable=False),
@@ -110,9 +108,7 @@ def upgrade() -> None:
             ["user_id"], ["users.id"], name=op.f("fk_memberships_user_id_users"), ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("user_id", "company_id", name=op.f("pk_memberships")),
-        sa.CheckConstraint(
-            "role IN ('owner', 'manager', 'viewer')", name=op.f("ck_memberships_role")
-        ),
+        sa.CheckConstraint("role IN ('owner', 'manager', 'viewer')", name=op.f("ck_memberships_role")),
     )
     op.create_index(op.f("ix_memberships_company_id"), "memberships", ["company_id"], unique=False)
     op.create_table(
@@ -129,9 +125,7 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("ip", sa.String(length=45), nullable=True),
         sa.Column("user_agent", sa.String(length=300), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], name=op.f("fk_sessions_user_id_users"), ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_sessions_user_id_users"), ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_sessions")),
         sa.UniqueConstraint("token_hash", name=op.f("uq_sessions_token_hash")),
     )

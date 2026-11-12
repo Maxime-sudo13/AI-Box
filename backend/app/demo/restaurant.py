@@ -154,6 +154,20 @@ SUPPLIERS = {
     ]
 }  # fmt: skip
 
+# Coordonnées fictives (domaines réservés « .example ») utilisées par les actions de démonstration.
+CONTACTS = {
+    "Primeurs du Val": ("commandes@primeurs-du-val.example", "Sophie Lambert"),
+    "Boucherie Marchand": ("contact@boucherie-marchand.example", "Marc Marchand"),
+    "Marée Atlantique": ("pro@maree-atlantique.example", "Julien Costa"),
+    "Laiterie des Monts": ("commandes@laiterie-des-monts.example", None),
+    "Cave des Coteaux": ("pro@cave-des-coteaux.example", "Élise Ferrand"),
+    "Volta Énergie": ("pro@volta-energie.example", None),
+    "TactilResto": ("resiliation@tactilresto.example", None),
+    "CaissePro": ("support@caissepro.example", None),
+    "Delmas Conseil": ("comptabilite@delmas-conseil.example", "Anne Delmas"),
+    "Atelier Morel Architectes": ("contact@atelier-morel.example", None),
+}
+
 CUSTOMERS = [
     ("Atelier Morel Architectes", "533901244", ["18 rue Childebert", "69002 Lyon"]),
     ("Delmas Conseil", "820417736", ["101 cours Gambetta", "69003 Lyon"]),

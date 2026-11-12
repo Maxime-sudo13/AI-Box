@@ -95,6 +95,8 @@ class UserSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ip: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(String(300))
+    # Dernière confirmation du mot de passe : exigée pour les opérations sensibles (niveau 3).
+    reauth_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="sessions")
 
@@ -139,6 +141,9 @@ class Party(Base):
     name_key: Mapped[str] = mapped_column(String(200))
     siren: Mapped[str | None] = mapped_column(String(9))
     category: Mapped[str | None] = mapped_column(String(40))
+    # Coordonnées utilisées par les actions (relances, demandes aux fournisseurs).
+    email: Mapped[str | None] = mapped_column(String(254))
+    contact_name: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -295,3 +300,123 @@ class AnomalyReview(Base):
     note: Mapped[str | None] = mapped_column(String(500))
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- Conseiller IA (Phase 3) --------------------------------------------------------------
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan", order_by="Message.id"
+    )
+
+
+class Message(Base):
+    """Un échange du conseiller. Les réponses conservent les faits calculés qui les fondent."""
+
+    __tablename__ = "messages"
+    __table_args__ = (CheckConstraint("role IN ('user', 'assistant')", name="role"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(10))
+    content: Mapped[str] = mapped_column(Text)
+    # Agents sollicités, faits utilisés (avec leurs sources), actions suggérées.
+    agents: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    facts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    suggestions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    # Rédaction : modèle utilisé (ou « moteur » sans IA), contrôle des chiffres, durée.
+    generation: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    conversation: Mapped[Conversation] = relationship(back_populates="messages")
+
+
+# --- Exécution d'actions (Phase 4) -----------------------------------------------------------
+
+
+class ActionPolicy(Base):
+    """Ce que le dirigeant autorise pour chaque type d'action."""
+
+    __tablename__ = "action_policies"
+    __table_args__ = (CheckConstraint("mode IN ('forbidden', 'approval', 'automatic')", name="mode"),)
+
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), primary_key=True)
+    action_type: Mapped[str] = mapped_column(String(60), primary_key=True)
+    mode: Mapped[str] = mapped_column(String(20))
+    updated_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Action(Base):
+    """Opération proposée, autorisée puis exécutée : le journal d'activité des agents."""
+
+    __tablename__ = "actions"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'executing', 'done', 'failed', 'rejected', 'cancelled', 'undone')",
+            name="status",
+        ),
+        CheckConstraint("risk_level IN (1, 2, 3)", name="risk_level"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    action_type: Mapped[str] = mapped_column(String(60))
+    risk_level: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    # Qui a proposé : un agent (« agent:executif ») ou une personne (« user »).
+    proposed_by: Mapped[str] = mapped_column(String(40))
+    proposed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Donnée déclenchante : alerte, document, message du conseiller.
+    trigger: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    # Autorisation obtenue : mode de la règle, personne, date, réauthentification.
+    authorization: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    error: Mapped[str | None] = mapped_column(Text)
+    reversible: Mapped[bool] = mapped_column(server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Task(Base):
+    """Tâche interne créée par une personne ou un agent (action de niveau 1)."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    details: Mapped[str | None] = mapped_column(Text)
+    due_on: Mapped[date | None] = mapped_column(Date)
+    done: Mapped[bool] = mapped_column(server_default=text("false"))
+    action_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("actions.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OutboundEmail(Base):
+    """Courriel émis par le boîtier : envoyé par SMTP, ou conservé dans la boîte d'envoi locale."""
+
+    __tablename__ = "outbound_emails"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    action_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("actions.id", ondelete="SET NULL"))
+    to_address: Mapped[str] = mapped_column(String(254))
+    subject: Mapped[str] = mapped_column(String(300))
+    body: Mapped[str] = mapped_column(Text)
+    transport: Mapped[str] = mapped_column(String(20))  # smtp ou outbox
+    message_id: Mapped[str | None] = mapped_column(String(300))
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

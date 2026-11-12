@@ -17,11 +17,11 @@ from pathlib import Path
 from sqlalchemy import select
 
 from app.db import SessionLocal
-from app.demo.restaurant import COMPANY, generate
+from app.demo.restaurant import COMPANY, CONTACTS, generate
 from app.finance.bank import import_bank, import_sales, reconcile
 from app.finance.ingest import AlreadyImported, ingest_document
 from app.finance.tabular import parse_bank, parse_sales
-from app.models import Company, DataImport, Membership, User
+from app.models import Company, DataImport, Membership, Party, User
 
 
 def seed(files: Path) -> None:
@@ -79,6 +79,9 @@ def seed(files: Path) -> None:
                 record.rows_added = importer(db, company.id, record, rows)
                 db.commit()
         matched = reconcile(db, company.id)
+        for party in db.scalars(select(Party).where(Party.company_id == company.id)):
+            if party.name in CONTACTS and not party.email:
+                party.email, party.contact_name = CONTACTS[party.name]
         db.commit()
         print(f"  {stats}, {matched} paiements rapprochés, en {time.monotonic() - started:.0f} s.")
 

@@ -20,6 +20,7 @@ CATALOG: tuple[Module, ...] = (
         "direction",
         "Direction générale",
         "Vue globale : santé de l'entreprise, alertes prioritaires et recommandations.",
+        available=True,
     ),
     Module(
         "finance",
@@ -67,6 +68,7 @@ CATALOG: tuple[Module, ...] = (
         "conseiller",
         "Conseiller stratégique IA",
         "Dialogue avec les données de l'entreprise et plans d'action justifiés.",
+        available=True,
     ),
 )
 

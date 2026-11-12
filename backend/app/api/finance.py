@@ -276,6 +276,25 @@ def treasury_view(
 def list_alerts(company_id: uuid.UUID, request: Request, auth: Auth = Depends(get_auth), db: Session = Depends(get_db)):
     company = company_access(db, request, auth.user, company_id, module="finance")
     _, _, _, alerts, elapsed = _analysis(db, company, with_alerts=True)
+    from app.actions.drafts import drafts_for_alert
+    from app.api.actions import action_out
+    from app.models import Action
+
+    linked: dict[str, list] = {}
+    for action in db.scalars(select(Action).where(Action.company_id == company.id).order_by(Action.created_at.desc())):
+        fp = (action.trigger or {}).get("alert")
+        if fp:
+            linked.setdefault(fp, []).append(action_out(action))
+    for alert in alerts:
+        alert["actions"] = linked.get(alert["fingerprint"], [])
+        alert["proposals"] = (
+            [
+                {"action_type": d["action_type"], "title": d["title"], "needs_recipient": d["needs_recipient"]}
+                for d in drafts_for_alert(db, company, alert)
+            ]
+            if alert["status"] == "open"
+            else []
+        )
     return {"items": alerts, "computed_in_ms": elapsed}
 
 

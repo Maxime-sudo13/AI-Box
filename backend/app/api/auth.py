@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -121,4 +122,20 @@ def change_password(
     # Les autres appareils connectés doivent se réauthentifier.
     db.execute(delete(UserSession).where(UserSession.user_id == auth.user.id, UserSession.id != auth.session.id))
     audit.record(db, request, "auth.password_change", actor=auth.user)
+    db.commit()
+
+
+class Reauth(BaseModel):
+    password: str
+
+
+@router.post("/reauth", status_code=status.HTTP_204_NO_CONTENT)
+def reauthenticate(body: Reauth, request: Request, auth: Auth = Depends(get_auth), db: Session = Depends(get_db)):
+    """Confirmation du mot de passe, exigée avant une opération sensible (niveau 3)."""
+    if not verify_password(auth.user.password_hash, body.password):
+        audit.record(db, request, "auth.reauth", actor=auth.user, outcome="failure")
+        db.commit()
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Mot de passe incorrect.")
+    auth.session.reauth_at = now()
+    audit.record(db, request, "auth.reauth", actor=auth.user)
     db.commit()

@@ -5,56 +5,16 @@ Le jeu de données est construit une seule fois pour le module (environ 30 secon
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
-from app.db import SessionLocal
-from app.demo.restaurant import COMPANY
-from app.finance.bank import reconcile
-from app.finance.ingest import ingest_document
 from app.main import app
-from app.models import Company, User
-from tests.conftest import PASSWORD, truncate_all
+from tests.conftest import PASSWORD, build_bistrot, truncate_all
 
 pytestmark = pytest.mark.shared_data
-
-THROUGH_API = 6  # factures importées par l'API HTTP ; les autres par le même circuit, en direct
 
 
 @pytest.fixture(scope="module")
 def bistrot(data_dir, demo_files):
-    truncate_all()
-    client = TestClient(app)
-    setup = {
-        "admin": {"email": "gerant@bistrot.example", "full_name": "Hugo Garnier", "password": PASSWORD},
-        "company": {"name": COMPANY["name"], "legal_form": "SARL", "siren": COMPANY["siren"], "sector": "Restauration"},
-        "modules": ["documents", "finance"],
-    }
-    response = client.post("/api/setup", json=setup)
-    assert response.status_code == 201, response.text
-    company_id = response.json()["memberships"][0]["company_id"]
-    base = f"/api/companies/{company_id}"
-
-    files = sorted((demo_files / "factures").iterdir())
-    for path in files[:THROUGH_API]:
-        r = client.post(f"{base}/documents", files={"file": (path.name, path.read_bytes())})
-        assert r.status_code in (201, 409), r.text
-    with SessionLocal() as db:
-        company = db.get(Company, company_id)
-        user = db.scalar(select(User))
-        for path in files[THROUGH_API:]:
-            try:
-                ingest_document(db, company, user, path.name, path.read_bytes())
-            except Exception as exc:  # le fichier en double est attendu
-                assert type(exc).__name__ == "AlreadyImported"
-            db.commit()
-        reconcile(db, company.id)
-        db.commit()
-    for kind, folder in (("sales", "caisse"), ("bank", "banque")):
-        path = next((demo_files / folder).glob("*.csv"))
-        r = client.post(f"{base}/imports/{kind}", files={"file": (path.name, path.read_bytes())})
-        assert r.status_code == 201, r.text
-    client.base = base
-    client.company_id = company_id
+    client = build_bistrot(demo_files, ["documents", "finance"])
     yield client
     truncate_all()
 

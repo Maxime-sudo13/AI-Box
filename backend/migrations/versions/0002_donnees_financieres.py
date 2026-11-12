@@ -83,9 +83,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_data_imports")),
     )
-    op.create_index(
-        op.f("ix_data_imports_company_id"), "data_imports", ["company_id"], unique=False
-    )
+    op.create_index(op.f("ix_data_imports_company_id"), "data_imports", ["company_id"], unique=False)
     op.create_table(
         "documents",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -299,18 +297,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_bank_transactions")),
         sa.UniqueConstraint("company_id", "fingerprint", name="uq_bank_transactions_company_fingerprint"),
     )
-    op.create_index(
-        op.f("ix_bank_transactions_booked_on"), "bank_transactions", ["booked_on"], unique=False
-    )
-    op.create_index(
-        op.f("ix_bank_transactions_company_id"), "bank_transactions", ["company_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_bank_transactions_import_id"), "bank_transactions", ["import_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_bank_transactions_invoice_id"), "bank_transactions", ["invoice_id"], unique=False
-    )
+    op.create_index(op.f("ix_bank_transactions_booked_on"), "bank_transactions", ["booked_on"], unique=False)
+    op.create_index(op.f("ix_bank_transactions_company_id"), "bank_transactions", ["company_id"], unique=False)
+    op.create_index(op.f("ix_bank_transactions_import_id"), "bank_transactions", ["import_id"], unique=False)
+    op.create_index(op.f("ix_bank_transactions_invoice_id"), "bank_transactions", ["invoice_id"], unique=False)
     op.create_table(
         "invoice_lines",
         sa.Column("id", sa.BigInteger(), sa.Identity(always=True), nullable=False),
@@ -331,12 +321,8 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_invoice_lines")),
     )
-    op.create_index(
-        op.f("ix_invoice_lines_invoice_id"), "invoice_lines", ["invoice_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_invoice_lines_product_key"), "invoice_lines", ["product_key"], unique=False
-    )
+    op.create_index(op.f("ix_invoice_lines_invoice_id"), "invoice_lines", ["invoice_id"], unique=False)
+    op.create_index(op.f("ix_invoice_lines_product_key"), "invoice_lines", ["product_key"], unique=False)
     # ### end Alembic commands ###
 
 

@@ -108,3 +108,55 @@ def make_user(admin):
         return client
 
     return _make
+
+
+THROUGH_API = 6  # factures importées par l'API HTTP ; les autres par le même circuit, en direct
+
+
+def build_bistrot(demo_files, modules: list[str]) -> TestClient:
+    """Installe le boîtier et importe tout le restaurant de démonstration (≈ 30 s)."""
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.demo.restaurant import COMPANY, CONTACTS
+    from app.finance.bank import reconcile
+    from app.finance.ingest import AlreadyImported, ingest_document
+    from app.models import Company, Party, User
+
+    truncate_all()
+    client = TestClient(app)
+    setup = {
+        "admin": {"email": "gerant@bistrot.example", "full_name": "Hugo Garnier", "password": PASSWORD},
+        "company": {"name": COMPANY["name"], "legal_form": "SARL", "siren": COMPANY["siren"], "sector": "Restauration"},
+        "modules": modules,
+    }
+    response = client.post("/api/setup", json=setup)
+    assert response.status_code == 201, response.text
+    company_id = response.json()["memberships"][0]["company_id"]
+    base = f"/api/companies/{company_id}"
+    files = sorted((demo_files / "factures").iterdir())
+    for path in files[:THROUGH_API]:
+        r = client.post(f"{base}/documents", files={"file": (path.name, path.read_bytes())})
+        assert r.status_code in (201, 409), r.text
+    with SessionLocal() as db:
+        company = db.get(Company, company_id)
+        user = db.scalar(select(User))
+        for path in files[THROUGH_API:]:
+            try:
+                ingest_document(db, company, user, path.name, path.read_bytes())
+            except AlreadyImported:
+                pass
+            db.commit()
+    for kind, folder in (("sales", "caisse"), ("bank", "banque")):
+        path = next((demo_files / folder).glob("*.csv"))
+        r = client.post(f"{base}/imports/{kind}", files={"file": (path.name, path.read_bytes())})
+        assert r.status_code == 201, r.text
+    with SessionLocal() as db:
+        reconcile(db, company_id)
+        for party in db.scalars(select(Party).where(Party.company_id == company_id)):
+            if party.name in CONTACTS:
+                party.email, party.contact_name = CONTACTS[party.name]
+        db.commit()
+    client.base = base
+    client.company_id = company_id
+    return client
