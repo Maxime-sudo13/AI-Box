@@ -46,8 +46,9 @@ class OllamaClient:
         self._available = False
 
     def available(self) -> bool:
-        # Vérification mise en cache 30 s : l'interface interroge souvent l'état du modèle.
-        if time.monotonic() - self._checked_at < 30:
+        # Vérification mise en cache (30 s si disponible, 10 s sinon) : l'interface interroge
+        # souvent l'état du modèle, et un Ollama qu'on vient de lancer doit être vu rapidement.
+        if time.monotonic() - self._checked_at < (30 if self._available else 10):
             return self._available
         self._checked_at = time.monotonic()
         try:

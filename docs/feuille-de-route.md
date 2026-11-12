@@ -36,6 +36,21 @@ sections 15 (MVP) et 17 (plan de développement).
 
 ## Journal
 
+### 12 novembre 2026 — test local sans boîtier
+
+- **Lancement en une commande sur un ordinateur** (Windows, Mac, Linux) avec Docker Desktop :
+  application, base, OCR et restaurant de démonstration sur http://localhost:8080, IA par
+  l'Ollama déjà installé sur l'ordinateur. Guide : [test-local.md](test-local.md).
+- **Première exécution réelle du déploiement Docker** : images construites, base migrée,
+  démonstration chargée (38 s), application servie par Caddy, connexion, OCR dans le
+  conteneur, en-têtes de sécurité. Le trajet réseau conteneur → Ollama de l'ordinateur a été
+  validé avec un faux serveur Ollama (indicateur « IA locale active », réponse rédigée par le
+  modèle puis contrôlée).
+- L'image du serveur passe de Debian à **Ubuntu 24.04 LTS** (Python 3.12), et `uv` est installé
+  depuis PyPI : l'image se construit avec les seuls dépôts Ubuntu et PyPI.
+- Reste à faire chez vous : le test avec le vrai Qwen 2.5 7B (proportion de réponses
+  acceptées par le contrôle des chiffres, temps de réponse).
+
 ### 12 novembre 2026 — v0.5.0, Phase 5 terminée
 
 Livré :

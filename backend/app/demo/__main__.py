@@ -24,11 +24,26 @@ from app.finance.tabular import parse_bank, parse_sales
 from app.models import Company, DataImport, Membership, Party, User
 
 
-def seed(files: Path) -> None:
+def seed(files: Path, admin_email: str | None = None, admin_password: str | None = None) -> None:
     with SessionLocal() as db:
         admin = db.scalar(select(User).where(User.is_admin, User.is_active).order_by(User.created_at))
+        if admin is None and admin_email and admin_password:
+            # Installation de démonstration : crée le compte administrateur s'il n'existe pas.
+            from app.security import hash_password
+
+            admin = User(
+                email=admin_email.lower(),
+                full_name="Hugo Garnier",
+                password_hash=hash_password(admin_password),
+                is_admin=True,
+            )
+            db.add(admin)
+            db.commit()
         if admin is None:
             sys.exit("Terminez d'abord l'installation du boîtier (compte administrateur).")
+        if db.scalar(select(Company).where(Company.name == COMPANY["name"])) is not None and admin_email:
+            print("Le restaurant de démonstration est déjà chargé.")
+            return
         company = db.scalar(select(Company).where(Company.name == COMPANY["name"]))
         if company is None:
             company = Company(
@@ -53,8 +68,8 @@ def seed(files: Path) -> None:
             except AlreadyImported:
                 stats["déjà présents"] += 1
             db.commit()
-            print(f"\r  Factures : {i}/{len(paths)}", end="", flush=True)
-        print()
+            if i % 50 == 0 or i == len(paths):
+                print(f"  Factures : {i}/{len(paths)}", flush=True)
         for kind, parser, importer in (("sales", parse_sales, import_sales), ("bank", parse_bank, import_bank)):
             folder = files / ("caisse" if kind == "sales" else "banque")
             for path in sorted(folder.glob("*.csv")):
@@ -93,6 +108,8 @@ def main() -> None:
     g.add_argument("--out", type=Path, default=Path("demo-restaurant"))
     s = sub.add_parser("seed", help="Créer l'entreprise de démonstration et importer ses données")
     s.add_argument("--files", type=Path, help="Dossier déjà généré (sinon, génération temporaire)")
+    s.add_argument("--admin-email", help="Crée ce compte administrateur si le boîtier n'en a pas encore")
+    s.add_argument("--admin-password")
     args = parser.parse_args()
 
     if args.command == "generate":
@@ -102,13 +119,17 @@ def main() -> None:
             f"bancaires, du {result.start:%d/%m/%Y} au {result.end:%d/%m/%Y}, dans {result.out_dir}"
         )
     else:
+        with SessionLocal() as db:
+            if db.scalar(select(Company).where(Company.name == COMPANY["name"])) is not None and args.admin_email:
+                print("Le restaurant de démonstration est déjà chargé.")
+                return
         if args.files:
-            seed(args.files)
+            seed(args.files, args.admin_email, args.admin_password)
         else:
             with tempfile.TemporaryDirectory() as tmp:
                 print("Génération des données…")
                 generate(Path(tmp) / "demo")
-                seed(Path(tmp) / "demo")
+                seed(Path(tmp) / "demo", args.admin_email, args.admin_password)
 
 
 if __name__ == "__main__":

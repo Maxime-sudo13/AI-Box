@@ -16,3 +16,7 @@ deploy/.env
 # Documents importés en développement et données de démonstration générées
 backend/data/
 demo-restaurant/
+
+# Dépôts de test locaux (dossier surveillé)
+deploy/depot/*
+!deploy/depot/.gitkeep

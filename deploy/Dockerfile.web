@@ -7,5 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 FROM caddy:2.10-alpine
-COPY deploy/Caddyfile /etc/caddy/Caddyfile
+# Caddyfile (HTTPS sur le boîtier) ou Caddyfile.local (HTTP simple pour un test sur un PC).
+ARG CADDYFILE=deploy/Caddyfile
+COPY ${CADDYFILE} /etc/caddy/Caddyfile
 COPY --from=build /src/dist /srv

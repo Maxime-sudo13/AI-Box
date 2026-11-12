@@ -7,6 +7,17 @@ logiciels dans les limites fixées par le dirigeant.
 - **Cahier des charges** : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - **Feuille de route et suivi** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 
+## Tester sur votre ordinateur
+
+Avec Docker Desktop installé, une seule commande lance l'application et le restaurant de
+démonstration sur **http://localhost:8080** (identifiants : `gerant@bistrot.local` /
+`demo-bistrot-2026`) :
+
+- Windows : `.\lancer-en-local.ps1`
+- Mac / Linux : `./lancer-en-local.sh`
+
+Guide détaillé, IA locale et dépannage : [docs/test-local.md](docs/test-local.md).
+
 ## État actuel — v0.5.0 (Phase 5 : connecteurs)
 
 ![Tableau de bord du restaurant de démonstration](docs/captures/1-tableau-de-bord.png)

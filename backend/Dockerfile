@@ -1,20 +1,22 @@
-FROM python:3.13-slim
+# Ubuntu 24.04 LTS : même base que le système du boîtier, maintenue jusqu'en 2029.
+FROM ubuntu:24.04
 
-# Reconnaissance de caractères locale (factures scannées et photos), en français.
+# Python 3.12 et reconnaissance de caractères locale (factures scannées et photos), en français.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra \
+    && apt-get install -y --no-install-recommends ca-certificates python3 python3-venv tesseract-ocr tesseract-ocr-fra \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.7 /uv /usr/local/bin/uv
+# uv installe les dépendances exactes du fichier uv.lock, avec le Python du système.
+RUN python3 -m venv /opt/uv && /opt/uv/bin/pip install --no-cache-dir uv==0.11.32 && ln -s /opt/uv/bin/uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv \
-    PATH="/opt/venv/bin:$PATH"
+    UV_PYTHON=/usr/bin/python3 UV_PYTHON_DOWNLOADS=never PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 
-RUN useradd --system --uid 10001 bab && mkdir -p /data && chown bab /data
+RUN useradd --system --uid 10001 bab && mkdir -p /data /depot && chown bab /data
 USER bab
 ENV BAB_DATA_DIR=/data
 
