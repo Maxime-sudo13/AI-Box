@@ -23,6 +23,14 @@ services:
     restart: unless-stopped
     environment:
       BAB_DATABASE_URL: postgresql+psycopg://bab:${BAB_DB_PASSWORD}@db:5432/bab
+      BAB_OLLAMA_URL: http://ollama:11434
+      BAB_AI_MODEL: ${BAB_AI_MODEL:-qwen2.5:7b}
+      # Envoi des courriels autorisés (facultatif). Sans serveur SMTP : boîte d'envoi locale.
+      BAB_SMTP_HOST: ${BAB_SMTP_HOST:-}
+      BAB_SMTP_PORT: ${BAB_SMTP_PORT:-587}
+      BAB_SMTP_USER: ${BAB_SMTP_USER:-}
+      BAB_SMTP_PASSWORD: ${BAB_SMTP_PASSWORD:-}
+      BAB_MAIL_FROM: ${BAB_MAIL_FROM:-}
     volumes:
       # Documents originaux importés : à placer sur le disque chiffré du boîtier.
       - documents:/data
@@ -30,6 +38,20 @@ services:
       db:
         condition: service_healthy
     networks: [internal]
+
+  # Modèle d'IA local. Sur le réseau interne : il ne peut joindre aucun service extérieur.
+  # Le modèle se télécharge une fois avec deploy/telecharger-modele.sh.
+  ollama:
+    image: ${BAB_OLLAMA_IMAGE:-ollama/ollama:0.6.8}
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    networks: [internal]
+    # Avec une carte graphique NVIDIA (version Professional / Enterprise), décommenter :
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
 
   web:
     build:
@@ -55,4 +77,5 @@ networks:
 volumes:
   db-data:
   documents:
+  ollama-models:
   caddy-data:

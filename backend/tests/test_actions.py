@@ -101,7 +101,10 @@ def test_agent_proposes_reminder_and_owner_approves(bistrot):
     eml = bistrot.get(f"{bistrot.base}/outbox/{sent['id']}.eml")
     assert eml.status_code == 200 and b"Subject: Relance" in eml.content
     # L'action est rattachée à son alerte et à son journal.
-    assert alerts(bistrot)["overdue_receivable"]["actions"][0]["status"] == "done"
+    followed = alerts(bistrot)["overdue_receivable"]
+    assert followed["actions"][0]["status"] == "done"
+    # L'alerte suivie d'une action passe d'elle-même à « prise en compte ».
+    assert followed["status"] == "acknowledged" and "Courriel" in followed["review_note"]
     trail = [e["action"] for e in bistrot.get("/api/audit", params={"limit": 10}).json()["items"]]
     assert {"action.propose", "action.approve", "action.execute"} <= set(trail)
 

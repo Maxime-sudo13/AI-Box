@@ -68,28 +68,28 @@ def month_summary(c: Composer, ctx: Context, **_: Any) -> None:
     label = month_label(key)
     link = _link_month(key)
     lines = [
-        f"Chiffre d'affaires HT {de(label)} : {c.fact(f'rev:{key}', f'Chiffre d’affaires HT {label}', m.revenue, link=link)}"
+        f"Chiffre d'affaires HT {de(label)} : {c.fact(f'rev:{key}', f'Chiffre d’affaires HT {label}', m.revenue, source='journal de caisse et factures de vente', link=link)}"
         + (
             f", contre {c.fact(f'rev:{prev.start}', f'Chiffre d’affaires HT {month_label(prev.start)}', prev.revenue, link=_link_month(prev.start))} le mois précédent."
             if prev.revenue
             else "."
         ),
-        f"EBE estimé : {c.fact(f'ebe:{key}', f'EBE estimé {label}', m.ebe, link=link)}, soit une marge de "
+        f"EBE estimé : {c.fact(f'ebe:{key}', f'EBE estimé {label}', m.ebe, source='compte de résultat du mois : caisse, factures et relevé bancaire', link=link)}, soit une marge de "
         f"{c.fact(f'ebe_pct:{key}', f'Marge d’EBE {label}', _ratio(m.ebe, m.revenue), 'pct', link=link)}.",
     ]
     if m.food_ht:
         food = _ratio(m.charges.get("alimentaire", ZERO), m.food_ht)
         lines.append(
-            f"Coût matière cuisine : {c.fact(f'food:{key}', f'Coût matière cuisine {label}', food, 'pct', link=link)}."
+            f"Coût matière cuisine : {c.fact(f'food:{key}', f'Coût matière cuisine {label}', food, 'pct', source='factures alimentaires ÷ CA nourriture du journal de caisse', link=link)}."
         )
     if m.drinks_ht:
         drinks = _ratio(m.charges.get("boissons", ZERO), m.drinks_ht)
         lines.append(
-            f"Coût matière boissons : {c.fact(f'drinks:{key}', f'Coût matière boissons {label}', drinks, 'pct', link=link)}."
+            f"Coût matière boissons : {c.fact(f'drinks:{key}', f'Coût matière boissons {label}', drinks, 'pct', source='factures de boissons ÷ CA boissons du journal de caisse', link=link)}."
         )
     payroll = m.group_total("personnel")
     lines.append(
-        f"Masse salariale : {c.fact(f'pay:{key}', f'Masse salariale {label}', payroll, link=link)}, soit "
+        f"Masse salariale : {c.fact(f'pay:{key}', f'Masse salariale {label}', payroll, source='relevé bancaire : salaires, rémunération du gérant et cotisations', link=link)}, soit "
         f"{c.fact(f'paypct:{key}', f'Masse salariale en % du CA {label}', _ratio(payroll, m.revenue), 'pct', link=link)} du chiffre d'affaires."
     )
     if m.covers:

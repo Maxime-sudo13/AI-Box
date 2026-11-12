@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { agentsApi } from "../agents";
 import { financeApi } from "../finance";
 import { useSession } from "../session";
 import { Brand } from "./ui";
@@ -7,6 +8,7 @@ import { Brand } from "./ui";
 export function Shell() {
   const { user, companies, company, selectCompany, signOut, hasModule } = useSession();
   const [alertCount, setAlertCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
   const location = useLocation();
   const companyId = company?.id;
   const financeOn = hasModule("finance");
@@ -19,10 +21,14 @@ export function Shell() {
       (r) => !cancelled && setAlertCount(r.items.filter((a) => a.status === "open").length),
       () => {},
     );
+    agentsApi.actions(companyId, "pending").then(
+      (r) => !cancelled && setPendingCount(r.items.length),
+      () => {},
+    );
     return () => {
       cancelled = true;
     };
-  }, [companyId, financeOn, location.pathname]);
+  }, [companyId, financeOn, location.key]);
 
   if (!user) return null;
 
@@ -38,6 +44,8 @@ export function Shell() {
               { to: "/tresorerie", label: "Trésorerie" },
             ]
           : []),
+        ...(hasModule("conseiller") ? [{ to: "/conseiller", label: "Conseiller" }] : []),
+        ...(finance ? [{ to: "/automatisation", label: "Automatisation", badge: pendingCount }] : []),
         { to: "/donnees", label: "Données" },
       ],
     },

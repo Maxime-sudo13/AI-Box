@@ -52,7 +52,7 @@ aucune aide, et les tests automatisés le vérifient à chaque modification.
 | Un bon de livraison sans montant. | Placé « à vérifier » : il n'est jamais inventé de montant | Honnêteté de l'extraction |
 | Fermeture estivale de deux semaines en août. | EBE négatif en août, trésorerie au plus bas fin août | Réalisme des données |
 
-## Déroulé conseillé (10 minutes)
+## Déroulé conseillé (15 minutes)
 
 1. **Tableau de bord** : la situation du mois se lit en moins de deux minutes. Cliquer sur
    « Coût matière cuisine » pour montrer la formule, les 18 factures utilisées et la
@@ -64,5 +64,14 @@ aucune aide, et les tests automatisés le vérifient à chaque modification.
 4. **Trésorerie** : le point bas de fin décembre et sa construction (connu ou estimé).
 5. **Données** : ouvrir une facture scannée et montrer l'original à côté des données lues,
    les coches « vérifié » et le paiement rapproché.
-6. **Confidentialité** : débrancher le câble réseau Internet du boîtier. Tout continue de
-   fonctionner.
+6. **Conseiller** : cliquer sur « Fais-moi un bilan complet », puis sur une référence [F6]
+   pour montrer la source du chiffre. Poser « Pourquoi mon bénéfice a-t-il diminué en
+   septembre ? » : le conseiller corrige la prémisse (il a augmenté). Poser « Si je recrute
+   une personne à 2 500 € par mois ? ».
+7. **Agent exécutif** : depuis la réponse sur les impayés, cliquer « Relancer Delmas
+   Conseil ». Montrer le courriel prêt, le modifier, l'autoriser, puis le retrouver dans
+   l'historique et la boîte d'envoi. Montrer que l'alerte est passée à « prise en compte ».
+8. **Autorisations** : passer « Écrire à un fournisseur » en « Interdit », puis montrer que
+   le niveau 3 (virement) ne peut pas être rendu automatique.
+9. **Confidentialité** : débrancher le câble réseau Internet du boîtier. Tout continue de
+   fonctionner, y compris le conseiller avec le modèle local.

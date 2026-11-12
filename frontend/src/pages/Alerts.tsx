@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { agentsApi } from "../agents";
 import { errorMessage } from "../api";
 import { Sparkline } from "../components/charts/Sparkline";
 import { formatValue, SeverityBadge } from "../components/finance-ui";
@@ -115,6 +116,19 @@ function AlertCard({
   const [note, setNote] = useState(alert.review_note ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  async function prepare(actionType: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const action = await agentsApi.fromAlert(companyId, alert.fingerprint, actionType);
+      navigate(`/automatisation?tab=${action.status === "pending" ? "pending" : "history"}&action=${action.id}`);
+    } catch (e) {
+      setError(errorMessage(e));
+      setBusy(false);
+    }
+  }
 
   async function review(status: Alert["status"]) {
     setBusy(true);
@@ -208,6 +222,34 @@ function AlertCard({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          {(alert.actions?.length ?? 0) > 0 && (
+            <div>
+              <h3>Actions liées</h3>
+              <ul className="evidence">
+                {alert.actions!.map((a) => (
+                  <li key={a.id}>
+                    <Link to={`/automatisation?tab=${a.status === "pending" ? "pending" : "history"}&action=${a.id}`}>{a.title}</Link>
+                    <span />
+                    <span className={`tag status-${a.status === "done" ? "ok" : a.status === "pending" ? "warn" : "muted"}`}>{a.status_label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {canEdit && alert.proposals && alert.proposals.length > 0 && (
+            <div className="proposals">
+              <h3>L'agent exécutif peut préparer</h3>
+              <div className="proposal-buttons">
+                {alert.proposals.map((p) => (
+                  <button key={p.action_type} className="btn" disabled={busy} onClick={() => void prepare(p.action_type)}>
+                    {p.title}
+                    {p.needs_recipient && <span className="muted small"> (adresse à compléter)</span>}
+                  </button>
+                ))}
+              </div>
+              <p className="muted small">Rien n'est envoyé sans votre validation dans le centre d'automatisation.</p>
             </div>
           )}
           {canEdit && (

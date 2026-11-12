@@ -83,6 +83,8 @@ export interface Alert {
   review_note: string | null;
   reviewed_at: string | null;
   action?: string;
+  proposals?: { action_type: string; title: string; needs_recipient: boolean }[];
+  actions?: { id: string; title: string; status: string; status_label: string; risk_level: number }[];
 }
 
 export interface TreasurySummary {

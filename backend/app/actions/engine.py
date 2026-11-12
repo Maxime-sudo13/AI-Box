@@ -193,6 +193,7 @@ def execute(db: Session, request: Request | None, company: Company, action: Acti
         with db.begin_nested():
             action.result = run(db, company, action)
         action.status, action.error = "done", None
+        _acknowledge_alert(db, company, action)
     except (ExecutionError, OSError) as exc:
         action.status, action.error = "failed", str(exc)[:1000]
     action.executed_at = now()
@@ -205,6 +206,24 @@ def execute(db: Session, request: Request | None, company: Company, action: Acti
         outcome="success" if action.status == "done" else "failure",
         error=action.error,
     )
+
+
+def _acknowledge_alert(db: Session, company: Company, action: Action) -> None:
+    """Une alerte suivie d'une action exécutée passe à « prise en compte », sauf décision contraire."""
+    fingerprint = (action.trigger or {}).get("alert")
+    if not fingerprint or action.action_type == "alert.update":
+        return
+    from app.models import AnomalyReview
+
+    if db.get(AnomalyReview, (company.id, fingerprint)) is None:
+        db.add(
+            AnomalyReview(
+                company_id=company.id,
+                fingerprint=fingerprint,
+                status="acknowledged",
+                note=f"{action.result.get('summary', action.title)} — le {now().strftime('%d/%m/%Y')}"[:500],
+            )
+        )
 
 
 def reject(

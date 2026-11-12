@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { Brand } from "./components/ui";
 import { Account } from "./pages/Account";
+import { Advisor } from "./pages/Advisor";
 import { Alerts } from "./pages/Alerts";
+import { Automation } from "./pages/Automation";
 import { Audit } from "./pages/Audit";
 import { CompanySettings } from "./pages/CompanySettings";
 import { Data } from "./pages/Data";
@@ -47,6 +49,8 @@ export function App() {
       <Route element={<Shell />}>
         <Route index element={<Home />} />
         <Route path="alertes" element={<Alerts />} />
+        <Route path="conseiller" element={<Advisor />} />
+        <Route path="automatisation" element={<Automation />} />
         <Route path="tresorerie" element={<Treasury />} />
         <Route path="donnees" element={<Data />} />
         <Route path="donnees/documents/:id" element={<DocumentReview />} />

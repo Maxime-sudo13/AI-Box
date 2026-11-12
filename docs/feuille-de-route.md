@@ -9,9 +9,9 @@ sections 15 (MVP) et 17 (plan de développement).
 |---|---|---|
 | 1. Fondations | Backend, base de données, authentification, première interface | ✅ Terminée (v0.1.0) |
 | 2. Intelligence financière | Import de factures, extraction, calculs, graphiques, anomalies | ✅ Terminée (v0.2.0) |
-| 3. IA | Ollama + Qwen, conseiller conversationnel, recommandations justifiées | ⏭️ Prochaine |
-| 4. Exécution | Moteur d'actions, niveaux 1/2/3, validations, journal des actions | À faire |
-| 5. Connecteurs | Socle de connecteurs, première intégration comptable/bancaire | À faire |
+| 3. IA | Ollama + Qwen, conseiller conversationnel, recommandations justifiées | ✅ Terminée (v0.4.0) |
+| 4. Exécution | Moteur d'actions, niveaux 1/2/3, validations, journal des actions | ✅ Terminée (v0.4.0) |
+| 5. Connecteurs | Socle de connecteurs, première intégration comptable/bancaire | ⏭️ Prochaine |
 | 6. Industrialisation | Mini-PC, durcissement, mises à jour signées, sauvegardes, pilote | À faire |
 
 ## Avancement du MVP (cahier des charges, §15)
@@ -28,13 +28,81 @@ sections 15 (MVP) et 17 (plan de développement).
 | 8 | Analyse des charges et revenus | ✅ Compte de résultat mensuel, EBE, ratios de restauration |
 | 9 | Détection des anomalies simples | ✅ 8 détecteurs justifiés et chiffrés |
 | 10 | Prévision de trésorerie | ✅ 90 jours, composantes connues et estimées séparées |
-| 11 | Conseiller IA local | — |
-| 12 | Système de recommandations | 🟡 Pistes d'action par alerte ; recommandations rédigées par l'IA en phase 3 |
-| 13 | Historique des analyses | 🟡 Analyses recalculées à la demande et reproductibles ; décisions sur les alertes historisées ; instantanés datés à faire |
-| 14 | Gestion des permissions | 🟡 Rôles utilisateurs faits ; permissions des actions IA en phase 4 |
-| 15 | Premier système d'exécution d'actions contrôlées | — |
+| 11 | Conseiller IA local | ✅ 5 agents, faits sourcés, modèle local contrôlé, repli sans IA |
+| 12 | Système de recommandations | ✅ Plan à 90 jours, leviers chiffrés, actions proposées par alerte |
+| 13 | Historique des analyses | ✅ Conversations conservées avec leurs faits ; décisions et actions historisées ; analyses reproductibles |
+| 14 | Gestion des permissions | ✅ Rôles + autorisations par type d'action et niveau de risque |
+| 15 | Premier système d'exécution d'actions contrôlées | ✅ Courriels (SMTP ou boîte d'envoi), tâches, reclassement, ordre de virement SEPA |
 
 ## Journal
+
+### 12 novembre 2026 — v0.4.0, Phases 3 et 4 terminées
+
+Phase 3 — Conseiller IA local :
+- **Agent central et 5 agents spécialisés** (financier, commercial, achats, administratif,
+  stratégique). Chacun n'accède qu'à ses familles de données : l'agent achats ne voit ni les
+  ventes ni la banque, et aucun agent hors finance et stratégie ne voit les salaires.
+- **17 outils d'analyse** répondent aux questions du cahier des charges : bilan complet,
+  baisse du bénéfice (avec décomposition de l'écart), capacité d'investissement, simulation
+  de recrutement, +10 % de bénéfice (leviers chiffrés sans double comptage), pertes,
+  comparaison de mois, priorités, plan à 90 jours, fournisseurs, abonnements, impayés…
+- **Chaque chiffre est un fait numéroté [F1]** : valeur, source, fiabilité (vérifié,
+  estimé, hypothèse) et lien vers le détail. Il s'ouvre d'un clic dans la conversation.
+- **Modèle local interchangeable** (Ollama, Qwen 2.5 7B par défaut). Il reçoit uniquement
+  les faits et la réponse du moteur, qu'il reformule. **Contrôle automatique** : si sa
+  rédaction contient un chiffre absent des faits, elle est écartée et la réponse du moteur
+  est affichée. Sans modèle, ou s'il ne répond pas, le conseiller fonctionne quand même.
+- Une question fondée sur une prémisse fausse (« pourquoi mon bénéfice a-t-il baissé »
+  alors qu'il a monté) est corrigée. Les questions de suivi gardent le mois en contexte.
+- Conversations conservées sur le boîtier, propres à chaque utilisateur, journalisées.
+
+Phase 4 — Exécution contrôlée :
+- **Catalogue d'actions par niveau de risque** : niveau 1 (tâche, statut d'alerte,
+  reclassement d'une facture), niveau 2 (relance client, courriel fournisseur, demande de
+  résiliation), niveau 3 (ordre de virement SEPA).
+- **Autorisations du dirigeant** par type d'action : interdit, sur validation ou
+  automatique. Le niveau 3 ne peut jamais être automatique, même par une règle modifiée en
+  base.
+- **Validation** : seul le dirigeant (ou l'administrateur) autorise. Il peut corriger le
+  courriel avant l'envoi ; les champs modifiés sont journalisés. Niveau 3 : mot de passe
+  ressaisi dans les 5 minutes et mot « CONFIRMER » tapé.
+- **Agent exécutif** : depuis une alerte ou une réponse du conseiller, il prépare la
+  relance, la demande de justification de prix, la demande de duplicata ou la résiliation,
+  avec un modèle de lettre déterministe (aucun chiffre inventé). Il propose, il n'exécute
+  pas.
+- **Exécution réelle** : courriels envoyés par SMTP si un serveur est configuré, sinon
+  conservés dans une boîte d'envoi locale (téléchargeables en .eml) ; ordre de virement
+  SEPA pain.001 à déposer dans la banque (le boîtier n'émet aucun paiement lui-même).
+- **Journal de chaque action** (exigence du cahier des charges) : date, agent, donnée
+  déclenchante, opération, autorisation, résultat, erreur, annulation possible.
+- Une alerte suivie d'une action exécutée passe d'elle-même à « prise en compte ».
+
+Vérifié : 90 tests automatisés, dont 13 pour le conseiller (avec un faux modèle qui invente
+un chiffre : sa rédaction est bien écartée) et 8 pour l'exécution (rôles, interdiction,
+réauthentification, IBAN invalide, envoi SMTP réel vers un serveur de test, fichier SEPA,
+annulation). Parcours complet dans un navigateur, sans requête externe.
+
+Non vérifié — **à faire sur votre PC** : le test avec le vrai modèle Qwen. L'environnement
+de développement en ligne bloque le téléchargement d'Ollama ; l'intégration suit l'API
+officielle d'Ollama et a été testée avec un faux serveur. Il faudra lancer le boîtier sur
+votre PC (Ollama + `qwen2.5:7b` déjà installés), poser les questions d'exemple et regarder
+combien de rédactions passent le contrôle des chiffres. Si Qwen 7B est trop souvent écarté,
+ajuster la consigne ou essayer un autre modèle : rien d'autre ne change.
+
+Limites connues :
+- Les intentions des questions sont reconnues par mots-clés : une formulation inattendue
+  reçoit le résumé du mois et les priorités. Un routage par le modèle pourra être ajouté.
+- Les brouillons de courriels sont des modèles de lettres ; leur reformulation par l'IA
+  (avec le même contrôle des chiffres) est une amélioration possible.
+- Le virement est préparé sous forme de fichier : l'exécution directe nécessitera un
+  connecteur bancaire (Phase 5) et une double authentification.
+
+### Prochaine étape — Phase 5 (connecteurs)
+
+1. Socle de connecteurs : authentification OAuth, jetons chiffrés, droits en lecture seule
+   par défaut, synchronisation périodique, gestion des erreurs et des accès expirés.
+2. Premier connecteur bancaire ou comptable (à choisir selon les conditions d'accès aux API).
+3. Importation automatique depuis un dossier surveillé.
 
 ### 12 novembre 2026 — v0.2.0, Phase 2 terminée
 

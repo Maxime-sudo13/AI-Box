@@ -7,23 +7,24 @@ logiciels dans les limites fixées par le dirigeant.
 - **Cahier des charges** : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - **Feuille de route et suivi** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 
-## État actuel — v0.2.0 (Phase 2, intelligence financière)
+## État actuel — v0.4.0 (Phases 3 et 4 : IA locale et exécution contrôlée)
 
 ![Tableau de bord du restaurant de démonstration](docs/captures/1-tableau-de-bord.png)
 
 | Fonction | État |
 |---|---|
 | Installation, comptes, rôles, entreprises, modules, journal d'activité | ✅ Phase 1 |
-| Import de factures par lots (PDF, scans, photos) avec lecture locale et OCR | ✅ |
-| Contrôle croisé des montants, fiabilité champ par champ, écran de vérification | ✅ |
-| Doublons (même fichier, même facture) et justificatifs manquants | ✅ |
-| Import du relevé bancaire et du journal de caisse (CSV), rapprochement automatique | ✅ |
-| Tableau de bord : CA, EBE, coût matière, masse salariale, ticket moyen | ✅ |
-| Chaque indicateur explique sa formule et ses sources | ✅ |
-| Prévision de trésorerie à 90 jours, composante par composante | ✅ |
-| Alertes justifiées et chiffrées (8 détecteurs) | ✅ |
-| Restaurant de démonstration complet | ✅ — voir [docs/demo.md](docs/demo.md) |
-| Conseiller IA local, actions contrôlées, connecteurs | Phases 3 à 5 |
+| Import de factures (PDF, scans, photos), relevé bancaire, journal de caisse | ✅ Phase 2 |
+| Tableau de bord, trésorerie à 90 jours, 8 détecteurs d'alertes justifiées | ✅ Phase 2 |
+| **Conseiller** : questions en français, 5 agents spécialisés cloisonnés, chaque chiffre sourcé | ✅ Phase 3 |
+| **IA locale** (Ollama + Qwen) interchangeable, avec contrôle de chaque chiffre rédigé | ✅ Phase 3 |
+| **Agent exécutif** : relances, demandes fournisseurs, résiliations préparées depuis les alertes | ✅ Phase 4 |
+| **Autorisations** par type d'action et niveau de risque, validation du dirigeant | ✅ Phase 4 |
+| **Niveau 3** : mot de passe et confirmation explicite, jamais automatique (ordre de virement SEPA) | ✅ Phase 4 |
+| Journal complet des actions, annulation des actions réversibles, boîte d'envoi | ✅ Phase 4 |
+| Connecteurs vers les logiciels du client | Phase 5 |
+
+Restaurant de démonstration complet : voir [docs/demo.md](docs/demo.md).
 
 ## Organisation
 
@@ -82,15 +83,23 @@ docker compose up -d --build
 ```
 
 Le boîtier est alors joignable en HTTPS sur `https://businessaibox.local` (certificat émis par
-l'autorité interne de Caddy). La base et l'API sont sur un réseau Docker sans accès sortant.
+l'autorité interne de Caddy). La base, l'API et le modèle d'IA sont sur un réseau Docker sans
+accès sortant. Le modèle se télécharge une fois : `deploy/telecharger-modele.sh qwen2.5:7b`.
+
+En développement, l'API utilise l'Ollama déjà installé sur le poste (`http://127.0.0.1:11434`,
+modèle `qwen2.5:7b`, réglables par `BAB_OLLAMA_URL` et `BAB_AI_MODEL`).
 
 ## Principes appliqués dès maintenant
 
 - **Zéro communication externe** : l'interface n'appelle que le boîtier (polices système,
   pas de CDN, documentation d'API désactivée hors développement), pas de télémétrie.
-- **Indépendance vis-à-vis de l'IA** : tous les calculs, la lecture des factures et la
-  détection des anomalies sont déterministes et n'utilisent aucun modèle d'IA. L'IA de la
-  Phase 3 interprétera ces résultats, sans jamais les produire.
+- **Indépendance vis-à-vis de l'IA** : calculs, lecture des factures, détection des
+  anomalies et brouillons d'actions sont déterministes. Le modèle local ne fait que
+  reformuler une réponse déjà calculée ; si un chiffre de sa rédaction n'existe pas dans les
+  faits, sa rédaction est écartée. Sans modèle, tout fonctionne.
+- **L'IA n'agit jamais seule** : elle ne voit pas les documents bruts (pas d'injection
+  d'instructions possible par une facture piégée), ne déclenche rien, et toute action
+  engageant l'entreprise attend la validation du dirigeant.
 - **Rien n'est inventé** : un montant illisible reste « manquant », un montant déduit est
   marqué « estimé », et chaque impact chiffré affiche sa formule.
 - **Moindre privilège** : chaque utilisateur ne voit que les entreprises auxquelles il est
