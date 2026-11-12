@@ -61,8 +61,15 @@ def bistrot(data_dir, demo_files):
 
 def viewer_client(admin: TestClient, role: str = "viewer") -> TestClient:
     email = f"{role}@bistrot.example"
-    r = admin.post("/api/users", json={"email": email, "full_name": role, "password": PASSWORD,
-                                       "memberships": [{"company_id": admin.company_id, "role": role}]})  # fmt: skip
+    r = admin.post(
+        "/api/users",
+        json={
+            "email": email,
+            "full_name": role,
+            "password": PASSWORD,
+            "memberships": [{"company_id": admin.company_id, "role": role}],
+        },
+    )
     assert r.status_code in (201, 409)
     client = TestClient(app)
     assert client.post("/api/auth/login", json={"email": email, "password": PASSWORD}).status_code == 200
@@ -123,9 +130,15 @@ def test_alerts_find_the_planted_situations(bistrot):
     alerts = bistrot.get(f"{bistrot.base}/finance/alerts").json()["items"]
     kinds = {a["kind"] for a in alerts}
     expected = {
-        "food_cost_drift", "overdue_receivable", "redundant_subscription", "price_increase",
-        "unusual_invoice", "missing_invoice", "duplicate", "treasury_tension",
-    }  # fmt: skip
+        "food_cost_drift",
+        "overdue_receivable",
+        "redundant_subscription",
+        "price_increase",
+        "unusual_invoice",
+        "missing_invoice",
+        "duplicate",
+        "treasury_tension",
+    }
     assert expected <= kinds, expected - kinds
     titles = " | ".join(a["title"] for a in alerts)
     assert "saumon" in titles and "Delmas Conseil" in titles and "TactilResto" in titles
@@ -136,8 +149,10 @@ def test_alerts_find_the_planted_situations(bistrot):
 
 def test_alert_review_is_persisted_and_audited(bistrot):
     alert = bistrot.get(f"{bistrot.base}/finance/alerts").json()["items"][0]
-    r = bistrot.post(f"{bistrot.base}/finance/alerts/review",
-                     json={"fingerprint": alert["fingerprint"], "status": "acknowledged", "note": "Vu avec le fournisseur"})  # fmt: skip
+    r = bistrot.post(
+        f"{bistrot.base}/finance/alerts/review",
+        json={"fingerprint": alert["fingerprint"], "status": "acknowledged", "note": "Vu avec le fournisseur"},
+    )
     assert r.status_code == 200
     again = {a["fingerprint"]: a for a in bistrot.get(f"{bistrot.base}/finance/alerts").json()["items"]}
     assert again[alert["fingerprint"]]["status"] == "acknowledged"

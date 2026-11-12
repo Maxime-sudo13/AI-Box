@@ -9,10 +9,15 @@ from app.extraction.text import find_amounts, find_dates, name_key, product_key,
 @pytest.mark.parametrize(
     "raw,expected",
     [
-        ("1 234,56", "1234.56"), ("1 234,56 €", "1234.56"), ("1.234,56", "1234.56"),
-        ("1,234.56", "1234.56"), ("1234.56", "1234.56"), ("-12,50", "-12.50"), ("0,2014", "0.2014"),
+        ("1 234,56", "1234.56"),
+        ("1 234,56 €", "1234.56"),
+        ("1.234,56", "1234.56"),
+        ("1,234.56", "1234.56"),
+        ("1234.56", "1234.56"),
+        ("-12,50", "-12.50"),
+        ("0,2014", "0.2014"),
     ],
-)  # fmt: skip
+)
 def test_to_decimal(raw, expected):
     assert to_decimal(raw) == Decimal(expected)
 
@@ -25,11 +30,13 @@ def test_find_amounts_ignores_percentages_and_dates():
 @pytest.mark.parametrize(
     "line,expected",
     [
-        ("Date de facture : 12/03/2026", date(2026, 3, 12)), ("Émise le 2026-03-12", date(2026, 3, 12)),
-        ("Lyon, le 1er mars 2026", date(2026, 3, 1)), ("Échéance : 5 août 2026", date(2026, 8, 5)),
+        ("Date de facture : 12/03/2026", date(2026, 3, 12)),
+        ("Émise le 2026-03-12", date(2026, 3, 12)),
+        ("Lyon, le 1er mars 2026", date(2026, 3, 1)),
+        ("Échéance : 5 août 2026", date(2026, 8, 5)),
         ("le 31/02/2026", None),
     ],
-)  # fmt: skip
+)
 def test_find_dates(line, expected):
     assert (find_dates(line) or [None])[0] == expected
 

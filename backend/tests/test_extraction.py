@@ -35,13 +35,24 @@ def test_demo_invoices_are_read_exactly(demo_files):
         read = read_document(path, "image/jpeg" if path.suffix == ".jpg" else "application/pdf")
         x = parse_invoice(read, company_name=COMPANY["name"], company_siren=COMPANY["siren"])
         got = {
-            "direction": x.direction, "party": x.party_name, "number": x.number,
-            "issue": x.issue_date.isoformat(), "due": x.due_date.isoformat(),
-            "ht": x.total_ht, "ttc": x.total_ttc, "lines": len(x.lines),
-        }  # fmt: skip
+            "direction": x.direction,
+            "party": x.party_name,
+            "number": x.number,
+            "issue": x.issue_date.isoformat(),
+            "due": x.due_date.isoformat(),
+            "ht": x.total_ht,
+            "ttc": x.total_ttc,
+            "lines": len(x.lines),
+        }
         expected = {
-            "direction": t["direction"], "party": t["party"], "number": t["number"], "issue": t["issue"],
-            "due": t["due"], "ht": Decimal(t["ht"]), "ttc": Decimal(t["ttc"]), "lines": t["lines"],
-        }  # fmt: skip
+            "direction": t["direction"],
+            "party": t["party"],
+            "number": t["number"],
+            "issue": t["issue"],
+            "due": t["due"],
+            "ht": Decimal(t["ht"]),
+            "ttc": Decimal(t["ttc"]),
+            "lines": t["lines"],
+        }
         assert got == expected, t["file"]
         assert x.complete, (t["file"], x.issues)

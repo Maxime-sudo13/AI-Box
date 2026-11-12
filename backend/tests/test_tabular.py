@@ -19,8 +19,9 @@ def test_bank_with_preamble_signed_amounts_and_cp1252():
     ).encode("cp1252")
     rows, report = parse_bank(data)
     assert [(r.booked_on, r.amount) for r in rows] == [
-        (date(2026, 10, 2), Decimal("-5912.40")), (date(2026, 10, 2), Decimal("1812.05")),
-    ]  # fmt: skip
+        (date(2026, 10, 2), Decimal("-5912.40")),
+        (date(2026, 10, 2), Decimal("1812.05")),
+    ]
     assert rows[0].label == "PRLV SEPA URSSAF RHÔNE-ALPES"
     assert rows[1].balance == Decimal("19899.65")
     assert report.skipped == 1
@@ -43,8 +44,10 @@ def test_bank_without_required_columns_is_refused():
 
 
 def test_sales_journal():
-    data = "Date;Couverts;CA nourriture HT;CA boissons HT;TVA;Total TTC;CB;Espèces\n" \
-           "04/11/2026;71;1 512,30;498,20;251,87;2 262,37;2 001,00;261,37\n".encode()  # fmt: skip
+    data = (
+        "Date;Couverts;CA nourriture HT;CA boissons HT;TVA;Total TTC;CB;Espèces\n"
+        "04/11/2026;71;1 512,30;498,20;251,87;2 262,37;2 001,00;261,37\n".encode()
+    )
     rows, _ = parse_sales(data)
     assert rows[0].covers == 71
     assert rows[0].total_ht == Decimal("2010.50")  # nourriture + boissons, faute de colonne « Total HT »
@@ -54,11 +57,14 @@ def test_sales_journal():
 @pytest.mark.parametrize(
     "label,amount,expected",
     [
-        ("REMISE CB 0311 TPE 44", "1200", "encaissement_cb"), ("PRLV SEPA URSSAF RHONE", "-5000", "charges_sociales"),
-        ("PRLV SEPA DGFIP TVA 102026", "-3000", "tva"), ("PRLV SEPA DGFIP IS ACOMPTE 122026", "-3100", "impot_societes"),
-        ("ECHEANCE PRET PROFESSIONNEL N 0412", "-1650", "emprunt"), ("VIR SEPA SALAIRES OCTOBRE", "-12000", "salaires"),
+        ("REMISE CB 0311 TPE 44", "1200", "encaissement_cb"),
+        ("PRLV SEPA URSSAF RHONE", "-5000", "charges_sociales"),
+        ("PRLV SEPA DGFIP TVA 102026", "-3000", "tva"),
+        ("PRLV SEPA DGFIP IS ACOMPTE 122026", "-3100", "impot_societes"),
+        ("ECHEANCE PRET PROFESSIONNEL N 0412", "-1650", "emprunt"),
+        ("VIR SEPA SALAIRES OCTOBRE", "-12000", "salaires"),
         ("VIR SEPA INCONNU", "-80", "a_classer"),
     ],
-)  # fmt: skip
+)
 def test_bank_rules(label, amount, expected):
     assert categorize(label, Decimal(amount), None)[0] == expected

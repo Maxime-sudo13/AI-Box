@@ -23,6 +23,10 @@
 	}
 
 	handle /api/* {
+		# Imports de factures par lots : 25 Mo par fichier au maximum (voir BAB_MAX_UPLOAD_MB).
+		request_body {
+			max_size 30MB
+		}
 		reverse_proxy api:8000
 	}
 

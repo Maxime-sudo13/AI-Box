@@ -101,20 +101,78 @@ _HEADER_NOISE = re.compile(r"\b(facture|duplicata|original|invoice|copie|avoir)\
 
 _CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "alimentaire": (
-        "legume", "fruit", "primeur", "boucher", "viande", "volaille", "poisson", "maree",
-        "saumon", "cabillaud", "bar ", "fromage", "fromagerie", "cremerie", "laiterie", "lait",
-        "creme", "beurre", "oeuf", "farine", "epicerie", "huile", "boulanger", "pain",
-        "charcut", "surgel", "boeuf", "veau", "agneau", "porc", "poulet", "pomme de terre",
-        "salade", "tomate", "herbes", "crustace", "moule", "sucre", "chocolat",
+        "legume",
+        "fruit",
+        "primeur",
+        "boucher",
+        "viande",
+        "volaille",
+        "poisson",
+        "maree",
+        "saumon",
+        "cabillaud",
+        "bar ",
+        "fromage",
+        "fromagerie",
+        "cremerie",
+        "laiterie",
+        "lait",
+        "creme",
+        "beurre",
+        "oeuf",
+        "farine",
+        "epicerie",
+        "huile",
+        "boulanger",
+        "pain",
+        "charcut",
+        "surgel",
+        "boeuf",
+        "veau",
+        "agneau",
+        "porc",
+        "poulet",
+        "pomme de terre",
+        "salade",
+        "tomate",
+        "herbes",
+        "crustace",
+        "moule",
+        "sucre",
+        "chocolat",
     ),
     "boissons": (
-        "vin ", "vins", "cave", "biere", "brasser", "boisson", "spiritueux", "champagne",
-        "eau minerale", "jus ", "cafe", "the ", "sirop", "soda", "cuvee", "aop", "igp", "fut ",
+        "vin ",
+        "vins",
+        "cave",
+        "biere",
+        "brasser",
+        "boisson",
+        "spiritueux",
+        "champagne",
+        "eau minerale",
+        "jus ",
+        "cafe",
+        "the ",
+        "sirop",
+        "soda",
+        "cuvee",
+        "aop",
+        "igp",
+        "fut ",
     ),
     "energie": ("electricite", "energie", " gaz", "kwh", "consommation", "abonnement electr", "compteur"),
     "entretien": ("hygiene", "nettoyage", "entretien", "detergent", "desinfect", "degraiss", "lessive"),
     "blanchisserie": ("blanchisserie", "linge", "nappe", "serviette", "tablier", "pressing", "veste de cuisine"),
-    "logiciels": ("logiciel", "licence", "saas", "caisse enregistreuse", "abonnement mensuel", "hebergement", "application"),
+    "logiciels": (
+        "logiciel",
+        "licence",
+        "saas",
+        "caisse enregistreuse",
+        "abonnement mensuel",
+        "hebergement",
+        "application",
+    ),
     "telecom": ("telephon", "internet", "fibre", "forfait mobile", " box"),
     "assurance": ("assurance", "cotisation annuelle", "sinistre"),
     "honoraires": ("honoraires", "expert-comptable", "expertise comptable", "comptab", "avocat", "conseil juridique"),
@@ -122,7 +180,7 @@ _CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
     "marketing": ("publicite", "impression", "flyer", "communication", "affiche", "carte de visite"),
     "loyer": ("loyer", "bail", "charges locatives"),
     "immobilisations": ("four mixte", "chambre froide", "installation et mise en service", "equipement professionnel"),
-}  # fmt: skip
+}
 
 
 def classify(text: str) -> str | None:
@@ -231,7 +289,7 @@ def _parse_lines_from_tables(tables: list[list[list[str | None]]]) -> list[Extra
             continue
         for row in table[header_index + 1 :]:
 
-            def cell(name: str) -> str:
+            def cell(name: str, row: list[str | None] = row, columns: dict[str, int] = columns) -> str:
                 col = columns.get(name)
                 return (row[col] or "").strip() if col is not None and col < len(row) else ""
 
@@ -280,6 +338,10 @@ def _parse_lines_from_text(lines: list[str]) -> list[ExtractedLine]:
         if quantity is None and unit_price and total:
             guess = (total / unit_price).quantize(Decimal("0.1"))
             quantity = guess if abs(guess * unit_price - total) <= TOLERANCE else None
+        if quantity is not None and unit_price and total and abs(quantity * unit_price - total) > TOLERANCE:
+            # Quantité mal lue (« 39 » pour « 3,5 ») : le montant et le prix unitaire font foi.
+            guess = (total / unit_price).quantize(Decimal("0.1"))
+            quantity = guess if abs(guess * unit_price - total) <= TOLERANCE else quantity
         if quantity is None:
             continue
         vat = to_decimal(m["vat"]) if m["vat"] else None
@@ -425,11 +487,11 @@ def parse_invoice(read: ReadResult, *, company_name: str, company_siren: str | N
             line.total_ht = (line.quantity * line.unit_price).quantize(CENT)
         if line.unit_price is None and line.total_ht is not None and line.quantity:
             line.unit_price = (line.total_ht / line.quantity).quantize(Decimal("0.0001"))
-    lines_total = sum((l.total_ht for l in out.lines if l.total_ht is not None), Decimal(0))
+    lines_total = sum((line.total_ht for line in out.lines if line.total_ht is not None), Decimal(0))
 
     _reconcile_totals(out, lines_total, tva_derived)
 
-    out.category = classify(" ".join([out.party_name or ""] + [l.description for l in out.lines]))
+    out.category = classify(" ".join([out.party_name or ""] + [line.description for line in out.lines]))
     if out.is_credit_note:
         out.issues.append("Ce document semble être un avoir : vérifiez le sens des montants.")
     return out

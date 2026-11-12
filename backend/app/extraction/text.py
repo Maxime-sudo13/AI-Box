@@ -16,11 +16,28 @@ _AMOUNT_RE = re.compile(
 _NUMBER_RE = re.compile(r"-?\d+(?:[.,]\d+)?")
 
 _MONTHS = {
-    "janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7,
-    "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12,
-    "janv": 1, "fevr": 2, "fev": 2, "avr": 4, "juil": 7, "sept": 9, "oct": 10, "nov": 11,
+    "janvier": 1,
+    "fevrier": 2,
+    "mars": 3,
+    "avril": 4,
+    "mai": 5,
+    "juin": 6,
+    "juillet": 7,
+    "aout": 8,
+    "septembre": 9,
+    "octobre": 10,
+    "novembre": 11,
+    "decembre": 12,
+    "janv": 1,
+    "fevr": 2,
+    "fev": 2,
+    "avr": 4,
+    "juil": 7,
+    "sept": 9,
+    "oct": 10,
+    "nov": 11,
     "dec": 12,
-}  # fmt: skip
+}
 _DATE_NUMERIC = re.compile(r"(?<!\d)(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4}|\d{2})(?!\d)")
 _DATE_ISO = re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
 _DATE_TEXT = re.compile(
@@ -28,9 +45,29 @@ _DATE_TEXT = re.compile(
 )
 
 LEGAL_FORMS = {
-    "sarl", "sas", "sasu", "eurl", "sa", "snc", "sci", "ei", "eirl", "scop", "sca", "selarl",
-    "earl", "gaec", "scea", "ste", "societe", "ets", "etablissements", "et", "cie", "fils",
-}  # fmt: skip
+    "sarl",
+    "sas",
+    "sasu",
+    "eurl",
+    "sa",
+    "snc",
+    "sci",
+    "ei",
+    "eirl",
+    "scop",
+    "sca",
+    "selarl",
+    "earl",
+    "gaec",
+    "scea",
+    "ste",
+    "societe",
+    "ets",
+    "etablissements",
+    "et",
+    "cie",
+    "fils",
+}
 
 
 def fold(value: str) -> str:

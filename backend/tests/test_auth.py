@@ -72,18 +72,12 @@ def test_change_password_revokes_other_sessions(admin, anon):
     assert login(anon).status_code == 200
     new_password = "nouveau-mot-de-passe-solide"
 
-    refused = admin.post(
-        "/api/auth/password", json={"current_password": "faux", "new_password": new_password}
-    )
+    refused = admin.post("/api/auth/password", json={"current_password": "faux", "new_password": new_password})
     assert refused.status_code == 403
-    too_short = admin.post(
-        "/api/auth/password", json={"current_password": PASSWORD, "new_password": "court"}
-    )
+    too_short = admin.post("/api/auth/password", json={"current_password": PASSWORD, "new_password": "court"})
     assert too_short.status_code == 422
 
-    changed = admin.post(
-        "/api/auth/password", json={"current_password": PASSWORD, "new_password": new_password}
-    )
+    changed = admin.post("/api/auth/password", json={"current_password": PASSWORD, "new_password": new_password})
     assert changed.status_code == 204
     assert admin.get("/api/auth/me").status_code == 200  # session courante conservée
     assert anon.get("/api/auth/me").status_code == 401  # autre appareil déconnecté
@@ -95,9 +89,7 @@ def test_logins_are_audited_without_secrets(admin, anon):
     login(anon, password="mauvais-mot-de-passe")
     login(anon)
     with SessionLocal() as db:
-        events = db.scalars(
-            select(AuditEvent).where(AuditEvent.action == "auth.login").order_by(AuditEvent.id)
-        ).all()
+        events = db.scalars(select(AuditEvent).where(AuditEvent.action == "auth.login").order_by(AuditEvent.id)).all()
     assert [e.outcome for e in events] == ["failure", "success"]
     assert all(e.actor_label == EMAIL for e in events)
     assert "mauvais-mot-de-passe" not in str([e.details for e in events])

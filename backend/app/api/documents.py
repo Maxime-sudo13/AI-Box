@@ -30,9 +30,13 @@ from app.models import BankTransaction, Document, Invoice, Party
 router = APIRouter(tags=["documents"])
 
 STATUS_LABELS = {
-    "verified": "Vérifiée automatiquement", "to_review": "À vérifier", "validated": "Validée",
-    "duplicate": "Doublon", "ignored": "Ignoré", "failed": "Illisible",
-}  # fmt: skip
+    "verified": "Vérifiée automatiquement",
+    "to_review": "À vérifier",
+    "validated": "Validée",
+    "duplicate": "Doublon",
+    "ignored": "Ignoré",
+    "failed": "Illisible",
+}
 
 
 @router.get("/categories")
@@ -44,23 +48,38 @@ def invoice_summary(inv: Invoice | None) -> dict | None:
     if inv is None:
         return None
     return {
-        "id": str(inv.id), "direction": inv.direction, "party": inv.party.name if inv.party else None,
-        "party_id": str(inv.party_id) if inv.party_id else None, "number": inv.number,
-        "issue_date": inv.issue_date, "due_date": inv.due_date, "total_ht": f(inv.total_ht),
-        "total_tva": f(inv.total_tva), "total_ttc": f(inv.total_ttc), "category": inv.category,
+        "id": str(inv.id),
+        "direction": inv.direction,
+        "party": inv.party.name if inv.party else None,
+        "party_id": str(inv.party_id) if inv.party_id else None,
+        "number": inv.number,
+        "issue_date": inv.issue_date,
+        "due_date": inv.due_date,
+        "total_ht": f(inv.total_ht),
+        "total_tva": f(inv.total_tva),
+        "total_ttc": f(inv.total_ttc),
+        "category": inv.category,
         "category_label": BY_KEY[inv.category].label if inv.category in BY_KEY else None,
-        "paid_on": inv.paid_on, "issues": inv.issues, "field_status": inv.field_status,
-    }  # fmt: skip
+        "paid_on": inv.paid_on,
+        "issues": inv.issues,
+        "field_status": inv.field_status,
+    }
 
 
 def document_out(doc: Document) -> dict:
     return {
-        "id": str(doc.id), "filename": doc.filename, "content_type": doc.content_type, "size": doc.size,
-        "status": doc.status, "status_label": STATUS_LABELS[doc.status], "uploaded_at": doc.uploaded_at,
-        "method": (doc.extraction or {}).get("method"), "error": doc.error,
+        "id": str(doc.id),
+        "filename": doc.filename,
+        "content_type": doc.content_type,
+        "size": doc.size,
+        "status": doc.status,
+        "status_label": STATUS_LABELS[doc.status],
+        "uploaded_at": doc.uploaded_at,
+        "method": (doc.extraction or {}).get("method"),
+        "error": doc.error,
         "duplicate_of_id": str(doc.duplicate_of_id) if doc.duplicate_of_id else None,
         "invoice": invoice_summary(doc.invoice),
-    }  # fmt: skip
+    }
 
 
 def _get_document(db: Session, company_id: uuid.UUID, document_id: uuid.UUID) -> Document:
@@ -102,8 +121,15 @@ async def upload_document(
             },
         ) from exc
     reconcile(db, company.id)
-    audit.record(db, request, "document.import", actor=auth.user, company_id=company.id, target=doc.filename,
-                 details={"status": doc.status, "method": (doc.extraction or {}).get("method")})  # fmt: skip
+    audit.record(
+        db,
+        request,
+        "document.import",
+        actor=auth.user,
+        company_id=company.id,
+        target=doc.filename,
+        details={"status": doc.status, "method": (doc.extraction or {}).get("method")},
+    )
     db.commit()
     return document_out(_get_document(db, company.id, doc.id))
 
@@ -165,9 +191,12 @@ def list_documents(
 
 @router.get("/companies/{company_id}/documents/{document_id}")
 def get_document(
-    company_id: uuid.UUID, document_id: uuid.UUID, request: Request,
-    auth: Auth = Depends(get_auth), db: Session = Depends(get_db),
-):  # fmt: skip
+    company_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
     company = company_access(db, request, auth.user, company_id, module="documents")
     doc = _get_document(db, company.id, document_id)
     out = document_out(doc)
@@ -175,10 +204,16 @@ def get_document(
     inv = doc.invoice
     if inv:
         out["invoice"]["lines"] = [
-            {"description": l.description, "quantity": f(l.quantity, 3), "unit": l.unit,
-             "unit_price": f(l.unit_price, 4), "vat_rate": f(l.vat_rate), "total_ht": f(l.total_ht)}
-            for l in inv.lines
-        ]  # fmt: skip
+            {
+                "description": line.description,
+                "quantity": f(line.quantity, 3),
+                "unit": line.unit,
+                "unit_price": f(line.unit_price, 4),
+                "vat_rate": f(line.vat_rate),
+                "total_ht": f(line.total_ht),
+            }
+            for line in inv.lines
+        ]
         out["invoice"]["vat_breakdown"] = inv.vat_breakdown
         payment = db.scalar(select(BankTransaction).where(BankTransaction.invoice_id == inv.id))
         out["invoice"]["payment"] = (
@@ -199,9 +234,12 @@ def get_document(
 
 @router.get("/companies/{company_id}/documents/{document_id}/file")
 def document_file(
-    company_id: uuid.UUID, document_id: uuid.UUID, request: Request,
-    auth: Auth = Depends(get_auth), db: Session = Depends(get_db),
-):  # fmt: skip
+    company_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
     company = company_access(db, request, auth.user, company_id, module="documents")
     doc = db.scalar(select(Document).where(Document.id == document_id, Document.company_id == company.id))
     if doc is None or not Path(doc.storage_path).is_file():
@@ -213,6 +251,40 @@ def document_file(
         content_disposition_type="inline",
         headers={"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff"},
     )
+
+
+@router.get("/companies/{company_id}/documents/{document_id}/preview/{page}")
+def document_preview(
+    company_id: uuid.UUID,
+    document_id: uuid.UUID,
+    page: int,
+    request: Request,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
+    """Image d'une page, rendue sur le boîtier : s'affiche dans tous les navigateurs, y compris mobiles."""
+    company = company_access(db, request, auth.user, company_id, module="documents")
+    doc = db.scalar(select(Document).where(Document.id == document_id, Document.company_id == company.id))
+    if doc is None or not Path(doc.storage_path).is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fichier introuvable.")
+    if doc.content_type != "application/pdf":
+        if page != 1:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Page introuvable.")
+        return FileResponse(
+            doc.storage_path, media_type=doc.content_type, headers={"Cache-Control": "private, max-age=86400"}
+        )
+    cached = Path(doc.storage_path).with_suffix(f".p{page}.png")
+    if not cached.is_file():
+        import pypdfium2 as pdfium
+
+        pdf = pdfium.PdfDocument(doc.storage_path)
+        if not 1 <= page <= len(pdf):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Page introuvable.")
+        image = pdf[page - 1].render(scale=150 / 72).to_pil()
+        tmp = cached.with_suffix(".tmp")
+        image.save(tmp, "PNG", optimize=True)
+        tmp.replace(cached)
+    return FileResponse(cached, media_type="image/png", headers={"Cache-Control": "private, max-age=86400"})
 
 
 class InvoicePatch(BaseModel):
@@ -231,9 +303,13 @@ class InvoicePatch(BaseModel):
 
 @router.patch("/companies/{company_id}/documents/{document_id}/invoice")
 def update_invoice(
-    company_id: uuid.UUID, document_id: uuid.UUID, body: InvoicePatch, request: Request,
-    auth: Auth = Depends(get_auth), db: Session = Depends(get_db),
-):  # fmt: skip
+    company_id: uuid.UUID,
+    document_id: uuid.UUID,
+    body: InvoicePatch,
+    request: Request,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
     company = company_access(db, request, auth.user, company_id, write=True, module="documents")
     doc = _get_document(db, company.id, document_id)
     inv = doc.invoice
@@ -260,17 +336,26 @@ def update_invoice(
         inv.category = body.category
         if body.apply_category_to_party and inv.party is not None:
             inv.party.category = body.category
-            others = db.scalars(select(Invoice).join(Document).where(
-                Invoice.party_id == inv.party_id, Invoice.id != inv.id, Document.status != "validated"))  # fmt: skip
+            others = db.scalars(
+                select(Invoice)
+                .join(Document)
+                .where(Invoice.party_id == inv.party_id, Invoice.id != inv.id, Document.status != "validated")
+            )
             for other in others:
                 other.category = body.category
-            for tx in db.scalars(select(BankTransaction).where(
-                    BankTransaction.party_id == inv.party_id, BankTransaction.category_source != "user")):  # fmt: skip
+            for tx in db.scalars(
+                select(BankTransaction).where(
+                    BankTransaction.party_id == inv.party_id, BankTransaction.category_source != "user"
+                )
+            ):
                 tx.category, tx.category_source = body.category, "party"
 
     if body.validate_invoice:
-        missing = [label for key, label in (("party_id", "le tiers"), ("issue_date", "la date"), ("total_ttc", "le montant TTC"))
-                   if getattr(inv, key) is None]  # fmt: skip
+        missing = [
+            label
+            for key, label in (("party_id", "le tiers"), ("issue_date", "la date"), ("total_ttc", "le montant TTC"))
+            if getattr(inv, key) is None
+        ]
         if missing:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_CONTENT, f"Pour valider, renseignez {', '.join(missing)}."
@@ -297,9 +382,15 @@ def update_invoice(
     inv.field_status = status_map
     db.flush()
     reconcile(db, company.id)
-    audit.record(db, request, "invoice.validate" if body.validate_invoice else "invoice.update", actor=auth.user,
-                 company_id=company.id, target=f"{inv.party.name if inv.party else '?'} {inv.number or ''}".strip(),
-                 details={"fields": sorted(changes), "status": doc.status})  # fmt: skip
+    audit.record(
+        db,
+        request,
+        "invoice.validate" if body.validate_invoice else "invoice.update",
+        actor=auth.user,
+        company_id=company.id,
+        target=f"{inv.party.name if inv.party else '?'} {inv.number or ''}".strip(),
+        details={"fields": sorted(changes), "status": doc.status},
+    )
     db.commit()
     return get_document(company_id, document_id, request, auth, db)
 
@@ -310,9 +401,13 @@ class StatusAction(BaseModel):
 
 @router.post("/companies/{company_id}/documents/{document_id}/status")
 def change_status(
-    company_id: uuid.UUID, document_id: uuid.UUID, body: StatusAction, request: Request,
-    auth: Auth = Depends(get_auth), db: Session = Depends(get_db),
-):  # fmt: skip
+    company_id: uuid.UUID,
+    document_id: uuid.UUID,
+    body: StatusAction,
+    request: Request,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
     company = company_access(db, request, auth.user, company_id, write=True, module="documents")
     doc = _get_document(db, company.id, document_id)
     inv = doc.invoice
@@ -340,20 +435,32 @@ def change_status(
             doc.status = "verified" if key_ok and inv.field_status.get("total_ttc") == "confirmed" else "to_review"
     db.flush()
     reconcile(db, company.id)
-    audit.record(db, request, f"document.{body.action}", actor=auth.user, company_id=company.id, target=doc.filename,
-                 details={"status": doc.status})  # fmt: skip
+    audit.record(
+        db,
+        request,
+        f"document.{body.action}",
+        actor=auth.user,
+        company_id=company.id,
+        target=doc.filename,
+        details={"status": doc.status},
+    )
     db.commit()
     return document_out(_get_document(db, company.id, doc.id))
 
 
 @router.get("/companies/{company_id}/parties")
 def list_parties(
-    company_id: uuid.UUID, request: Request, kind: Literal["supplier", "customer"] | None = None,
-    auth: Auth = Depends(get_auth), db: Session = Depends(get_db),
-):  # fmt: skip
+    company_id: uuid.UUID,
+    request: Request,
+    kind: Literal["supplier", "customer"] | None = None,
+    auth: Auth = Depends(get_auth),
+    db: Session = Depends(get_db),
+):
     company = company_access(db, request, auth.user, company_id)
     query = select(Party).where(Party.company_id == company.id).order_by(Party.name)
     if kind:
         query = query.where(Party.kind == kind)
-    return [{"id": str(p.id), "name": p.name, "kind": p.kind, "siren": p.siren, "category": p.category}
-            for p in db.scalars(query)]  # fmt: skip
+    return [
+        {"id": str(p.id), "name": p.name, "kind": p.kind, "siren": p.siren, "category": p.category}
+        for p in db.scalars(query)
+    ]

@@ -1,6 +1,6 @@
 [project]
 name = "business-ai-box"
-version = "0.1.0"
+version = "0.2.0"
 description = "Business AI Box — backend applicatif"
 requires-python = ">=3.12"
 dependencies = [
@@ -36,4 +36,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 # B008 : Depends(...) en valeur par défaut est l'idiome FastAPI.
-ignore = ["B008"]
+# E501 : la largeur est assurée par le formateur ; seules dépassent des phrases destinées à l'utilisateur.
+ignore = ["B008", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Catalogues de données du restaurant fictif : une ligne par produit reste plus lisible.
+"app/demo/restaurant.py" = ["E741", "B023"]

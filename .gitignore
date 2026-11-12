@@ -12,3 +12,7 @@ frontend/dist/
 # Configuration locale (ne jamais versionner de secrets)
 .env
 deploy/.env
+
+# Documents importés en développement et données de démonstration générées
+backend/data/
+demo-restaurant/

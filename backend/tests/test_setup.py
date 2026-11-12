@@ -28,12 +28,7 @@ def test_setup_runs_only_once(admin, anon):
     second = {**SETUP, "admin": {**SETUP["admin"], "email": "intrus@exemple.fr"}}
     response = anon.post("/api/setup", json=second)
     assert response.status_code == 409
-    assert (
-        anon.post(
-            "/api/auth/login", json={"email": "intrus@exemple.fr", "password": PASSWORD}
-        ).status_code
-        == 401
-    )
+    assert anon.post("/api/auth/login", json={"email": "intrus@exemple.fr", "password": PASSWORD}).status_code == 401
 
 
 def test_setup_rejects_weak_password_and_unknown_module(anon):

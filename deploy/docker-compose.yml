@@ -23,6 +23,9 @@ services:
     restart: unless-stopped
     environment:
       BAB_DATABASE_URL: postgresql+psycopg://bab:${BAB_DB_PASSWORD}@db:5432/bab
+    volumes:
+      # Documents originaux importés : à placer sur le disque chiffré du boîtier.
+      - documents:/data
     depends_on:
       db:
         condition: service_healthy
@@ -51,4 +54,5 @@ networks:
 
 volumes:
   db-data:
+  documents:
   caddy-data:

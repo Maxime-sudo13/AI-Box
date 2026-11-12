@@ -18,10 +18,7 @@ def test_users_only_see_their_companies(admin, make_user, second_company):
     assert [(c["name"], c["role"]) for c in companies] == [("Atelier Martin", "viewer")]
     # Une entreprise étrangère est indiscernable d'une entreprise inexistante.
     assert client.get(f"/api/companies/{second_company}").status_code == 404
-    assert (
-        client.patch(f"/api/companies/{second_company}", json={"name": "Piratée"}).status_code
-        == 404
-    )
+    assert client.patch(f"/api/companies/{second_company}", json={"name": "Piratée"}).status_code == 404
 
 
 @pytest.mark.parametrize("role,expected", [("owner", 200), ("manager", 403), ("viewer", 403)])

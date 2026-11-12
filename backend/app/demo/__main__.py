@@ -31,8 +31,13 @@ def seed(files: Path) -> None:
             sys.exit("Terminez d'abord l'installation du boîtier (compte administrateur).")
         company = db.scalar(select(Company).where(Company.name == COMPANY["name"]))
         if company is None:
-            company = Company(name=COMPANY["name"], legal_form=COMPANY["legal_form"], siren=COMPANY["siren"],
-                              sector=COMPANY["sector"], enabled_modules=["direction", "documents", "finance", "conseiller"])  # fmt: skip
+            company = Company(
+                name=COMPANY["name"],
+                legal_form=COMPANY["legal_form"],
+                siren=COMPANY["siren"],
+                sector=COMPANY["sector"],
+                enabled_modules=["direction", "documents", "finance", "conseiller"],
+            )
             db.add(company)
             db.flush()
             db.add(Membership(user_id=admin.id, company_id=company.id, role="owner"))
@@ -56,10 +61,19 @@ def seed(files: Path) -> None:
                 data = path.read_bytes()
                 rows, report = parser(data)
                 dates = [getattr(r, "booked_on", None) or r.day for r in rows]
-                record = DataImport(company_id=company.id, kind=kind, filename=path.name, sha256="demo",
-                                    rows_total=report.rows_total, rows_added=0, rows_skipped=report.skipped,
-                                    period_start=min(dates), period_end=max(dates), warnings=report.warnings,
-                                    imported_by_id=admin.id)  # fmt: skip
+                record = DataImport(
+                    company_id=company.id,
+                    kind=kind,
+                    filename=path.name,
+                    sha256="demo",
+                    rows_total=report.rows_total,
+                    rows_added=0,
+                    rows_skipped=report.skipped,
+                    period_start=min(dates),
+                    period_end=max(dates),
+                    warnings=report.warnings,
+                    imported_by_id=admin.id,
+                )
                 db.add(record)
                 db.flush()
                 record.rows_added = importer(db, company.id, record, rows)
@@ -80,8 +94,10 @@ def main() -> None:
 
     if args.command == "generate":
         result = generate(args.out)
-        print(f"{result.files} factures, {result.sales_days} journées de caisse, {result.bank_rows} opérations "
-              f"bancaires, du {result.start:%d/%m/%Y} au {result.end:%d/%m/%Y}, dans {result.out_dir}")  # fmt: skip
+        print(
+            f"{result.files} factures, {result.sales_days} journées de caisse, {result.bank_rows} opérations "
+            f"bancaires, du {result.start:%d/%m/%Y} au {result.end:%d/%m/%Y}, dans {result.out_dir}"
+        )
     else:
         if args.files:
             seed(args.files)

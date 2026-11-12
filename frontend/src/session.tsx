@@ -12,6 +12,9 @@ interface SessionState {
   company: Company | null;
   /** Peut modifier l'entreprise courante : administrateur du boîtier ou dirigeant. */
   canManageCompany: boolean;
+  /** Peut importer et valider des données : administrateur, dirigeant ou gestionnaire. */
+  canEditData: boolean;
+  hasModule: (key: string) => boolean;
   selectCompany: (id: string) => void;
   signedIn: (user: User) => Promise<void>;
   signOut: () => Promise<void>;
@@ -111,6 +114,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       companies,
       company,
       canManageCompany: Boolean(user && company && (user.is_admin || company.role === "owner")),
+      canEditData: Boolean(user && company && (user.is_admin || company.role === "owner" || company.role === "manager")),
+      hasModule: (key: string) => Boolean(company?.enabled_modules.includes(key)),
       selectCompany,
       signedIn,
       signOut,

@@ -24,9 +24,26 @@ from app.models import BankTransaction
 HORIZON = 90
 RECEIPT_CATEGORIES = ("encaissement_cb", "encaissement_especes", "encaissement_titres")
 MONTH_WORDS = {
-    "janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre",
-    "octobre", "novembre", "decembre", "sepa", "vir", "prlv", "fact", "facture", "ech", "echeance",
-}  # fmt: skip
+    "janvier",
+    "fevrier",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "aout",
+    "septembre",
+    "octobre",
+    "novembre",
+    "decembre",
+    "sepa",
+    "vir",
+    "prlv",
+    "fact",
+    "facture",
+    "ech",
+    "echeance",
+}
 
 
 def signature(label: str) -> str:
@@ -70,10 +87,17 @@ def recurring_charges(ds: Dataset, as_of: date, excluded_parties: set) -> list[d
         amount = Decimal(statistics.median(last_amounts)).quantize(Decimal("0.01"))
         if dates[-1] < as_of - timedelta(days=45 * period):
             continue  # n'apparaît plus : probablement arrêté
-        out.append({
-            "category": category, "label": txs[-1].label, "signature": sig, "amount": amount,
-            "period_months": period, "last_date": dates[-1], "occurrences": len(txs),
-        })  # fmt: skip
+        out.append(
+            {
+                "category": category,
+                "label": txs[-1].label,
+                "signature": sig,
+                "amount": amount,
+                "period_months": period,
+                "last_date": dates[-1],
+                "occurrences": len(txs),
+            }
+        )
     return out
 
 
@@ -109,8 +133,9 @@ def forecast(ds: Dataset) -> dict[str, Any]:
         if not (as_of < day <= end):
             return
         (inflow if amount > 0 else outflow)[day] += abs(amount)
-        events.append({"date": day.isoformat(), "label": label, "amount": f(amount), "kind": kind,
-                       "certainty": certainty, **ref})  # fmt: skip
+        events.append(
+            {"date": day.isoformat(), "label": label, "amount": f(amount), "kind": kind, "certainty": certainty, **ref}
+        )
 
     # 1. Recettes courantes (caisse) ---------------------------------------------------------
     window_start = as_of - timedelta(days=55)
@@ -125,11 +150,15 @@ def forecast(ds: Dataset) -> dict[str, Any]:
         amount = by_weekday[d.weekday()] / weeks
         inflow[d] += amount
         projected_receipts += amount
-    components.append({
-        "key": "receipts", "label": "Encaissements de caisse attendus", "amount": f(projected_receipts),
-        "certainty": "estimated",
-        "detail": f"Moyenne par jour de la semaine des {len(receipts)} encaissements (carte, espèces, titres) des 8 dernières semaines.",
-    })  # fmt: skip
+    components.append(
+        {
+            "key": "receipts",
+            "label": "Encaissements de caisse attendus",
+            "amount": f(projected_receipts),
+            "certainty": "estimated",
+            "detail": f"Moyenne par jour de la semaine des {len(receipts)} encaissements (carte, espèces, titres) des 8 dernières semaines.",
+        }
+    )
     if receipts:
         notes.append("Les recettes futures reprennent le niveau des 8 dernières semaines, sans effet de saison.")
 
@@ -140,15 +169,36 @@ def forecast(ds: Dataset) -> dict[str, Any]:
             continue
         overdue = (as_of - inv.due_date).days
         if overdue > 30:
-            risky.append({"invoice_id": str(inv.id), "document_id": str(inv.document_id), "number": inv.number,
-                          "party": ds.party_name(inv.party_id), "amount": f(inv.total_ttc), "overdue_days": overdue})  # fmt: skip
+            risky.append(
+                {
+                    "invoice_id": str(inv.id),
+                    "document_id": str(inv.document_id),
+                    "number": inv.number,
+                    "party": ds.party_name(inv.party_id),
+                    "amount": f(inv.total_ttc),
+                    "overdue_days": overdue,
+                }
+            )
             continue
         when = inv.due_date if inv.due_date > as_of else as_of + timedelta(days=7)
         receivable_total += inv.total_ttc
-        event(when, f"Règlement attendu : {ds.party_name(inv.party_id)} ({inv.number})", inv.total_ttc, "receivable", "known",
-              document_id=str(inv.document_id))  # fmt: skip
-    components.append({"key": "receivables", "label": "Factures clients à encaisser", "amount": f(receivable_total),
-                       "certainty": "known", "detail": "À leur échéance ; une semaine de délai si l'échéance est passée de moins de 30 jours."})  # fmt: skip
+        event(
+            when,
+            f"Règlement attendu : {ds.party_name(inv.party_id)} ({inv.number})",
+            inv.total_ttc,
+            "receivable",
+            "known",
+            document_id=str(inv.document_id),
+        )
+    components.append(
+        {
+            "key": "receivables",
+            "label": "Factures clients à encaisser",
+            "amount": f(receivable_total),
+            "certainty": "known",
+            "detail": "À leur échéance ; une semaine de délai si l'échéance est passée de moins de 30 jours.",
+        }
+    )
     if risky:
         total = sum((Decimal(str(r["amount"])) for r in risky), ZERO)
         notes.append(
@@ -166,10 +216,23 @@ def forecast(ds: Dataset) -> dict[str, Any]:
             continue  # trop ancienne pour être encore due : probablement réglée autrement
         when = due if due > as_of else as_of + timedelta(days=1)
         payable_total += inv.total_ttc
-        event(when, f"{ds.party_name(inv.party_id)} ({inv.number or 'sans numéro'})", -inv.total_ttc, "invoice", "known",
-              document_id=str(inv.document_id))  # fmt: skip
-    components.append({"key": "payables", "label": "Factures fournisseurs à payer", "amount": f(-payable_total),
-                       "certainty": "known", "detail": "Factures importées non encore rapprochées d'un paiement, à leur échéance."})  # fmt: skip
+        event(
+            when,
+            f"{ds.party_name(inv.party_id)} ({inv.number or 'sans numéro'})",
+            -inv.total_ttc,
+            "invoice",
+            "known",
+            document_id=str(inv.document_id),
+        )
+    components.append(
+        {
+            "key": "payables",
+            "label": "Factures fournisseurs à payer",
+            "amount": f(-payable_total),
+            "certainty": "known",
+            "detail": "Factures importées non encore rapprochées d'un paiement, à leur échéance.",
+        }
+    )
 
     # 4. Achats futurs des fournisseurs réguliers ----------------------------------------------
     regular: dict = defaultdict(list)
@@ -193,11 +256,16 @@ def forecast(ds: Dataset) -> dict[str, Any]:
             outflow[as_of + timedelta(days=i)] += rate
         projected_purchases += total
         supplier_rows.append({"party": ds.party_name(party_id), "monthly": f(rate * 30), "delay_days": delay})
-    components.append({
-        "key": "purchases", "label": "Achats futurs des fournisseurs réguliers", "amount": f(-projected_purchases),
-        "certainty": "estimated", "suppliers": sorted(supplier_rows, key=lambda r: -(r["monthly"] or 0)),
-        "detail": "Rythme d'achat des 90 derniers jours, payé selon le délai habituel de chaque fournisseur.",
-    })  # fmt: skip
+    components.append(
+        {
+            "key": "purchases",
+            "label": "Achats futurs des fournisseurs réguliers",
+            "amount": f(-projected_purchases),
+            "certainty": "estimated",
+            "suppliers": sorted(supplier_rows, key=lambda r: -(r["monthly"] or 0)),
+            "detail": "Rythme d'achat des 90 derniers jours, payé selon le délai habituel de chaque fournisseur.",
+        }
+    )
 
     # 5. Charges récurrentes sans facture --------------------------------------------------------
     recurring_total = ZERO
@@ -208,12 +276,21 @@ def forecast(ds: Dataset) -> dict[str, Any]:
             nxt = _add_months(nxt, rec["period_months"])
         while nxt <= end:
             label = BY_KEY[rec["category"]].label if rec["category"] in BY_KEY else rec["label"]
-            event(nxt, f"{label} ({rec['label'].title()[:40]})", -rec["amount"], "recurring", "estimated")
+            who = re.sub(r"^(PRLV|VIR|PRELEVEMENT|VIREMENT)( SEPA)?\s+", "", rec["label"], flags=re.I)
+            who = re.sub(r"\s+\S*\d\S*$", "", who)[:40]
+            event(nxt, f"{label} · {who}", -rec["amount"], "recurring", "estimated")
             recurring_total += rec["amount"]
             nxt = _add_months(nxt, rec["period_months"])
-    components.append({"key": "recurring", "label": "Charges récurrentes (salaires, loyer, cotisations…)", "amount": f(-recurring_total),
-                       "certainty": "estimated", "count": len(recurring),
-                       "detail": "Opérations mensuelles ou trimestrielles repérées dans le relevé, au montant médian des trois dernières."})  # fmt: skip
+    components.append(
+        {
+            "key": "recurring",
+            "label": "Charges récurrentes (salaires, loyer, cotisations…)",
+            "amount": f(-recurring_total),
+            "certainty": "estimated",
+            "count": len(recurring),
+            "detail": "Opérations mensuelles ou trimestrielles repérées dans le relevé, au montant médian des trois dernières.",
+        }
+    )
 
     # Solde jour par jour ----------------------------------------------------------------------
     points, running = [], balance
@@ -237,11 +314,18 @@ def forecast(ds: Dataset) -> dict[str, Any]:
             f"Le dernier relevé bancaire date du {as_of.strftime('%d/%m/%Y')} : importez un relevé plus récent pour fiabiliser la prévision.",
         )
     return {
-        "available": True, "as_of": as_of.isoformat(), "balance": f(balance), "horizon_days": HORIZON,
+        "available": True,
+        "as_of": as_of.isoformat(),
+        "balance": f(balance),
+        "horizon_days": HORIZON,
         "threshold": f(threshold),
         "threshold_formula": f"10 jours de dépenses moyennes ({money(daily_out)} par jour sur les 90 derniers jours)",
-        "history": history, "forecast": points,
+        "history": history,
+        "forecast": points,
         "low_point": {"date": low[0].isoformat(), "balance": f(low[1])},
-        "end_balance": f(running), "components": components, "events": events,
-        "notes": notes, "risky_receivables": risky,
-    }  # fmt: skip
+        "end_balance": f(running),
+        "components": components,
+        "events": events,
+        "notes": notes,
+        "risky_receivables": risky,
+    }

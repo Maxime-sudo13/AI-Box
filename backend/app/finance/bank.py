@@ -174,7 +174,7 @@ def import_sales(db: Session, company_id: uuid.UUID, data_import: DataImport, ro
                         "cash",
                         "meal_vouchers",
                     )
-                },  # fmt: skip
+                },
             )
         )
     return len(rows)
@@ -232,11 +232,13 @@ def reconcile(db: Session, company_id: uuid.UUID) -> int:
         target = abs(tx.amount)
         label_key = re.sub(r"[^A-Z0-9]", "", tx.label.upper())
         candidates = [
-            inv for inv in open_invoices
-            if inv.direction == direction and abs(abs(inv.total_ttc) - target) <= Decimal("0.01")
+            inv
+            for inv in open_invoices
+            if inv.direction == direction
+            and abs(abs(inv.total_ttc) - target) <= Decimal("0.01")
             and inv.issue_date is not None
             and inv.issue_date - timedelta(days=5) <= tx.booked_on <= inv.issue_date + timedelta(days=150)
-        ]  # fmt: skip
+        ]
         if tx.party_id:
             same_party = [i for i in candidates if i.party_id == tx.party_id]
             candidates = same_party
@@ -245,10 +247,10 @@ def reconcile(db: Session, company_id: uuid.UUID) -> int:
         if not candidates:
             continue
 
-        def rank(inv: Invoice):
+        def rank(inv: Invoice, label_key: str = label_key, booked_on=tx.booked_on):
             cited = bool(inv.number) and re.sub(r"[^A-Z0-9]", "", inv.number.upper()) in label_key
             due = inv.due_date or inv.issue_date
-            return (not cited, abs((tx.booked_on - due).days))
+            return (not cited, abs((booked_on - due).days))
 
         invoice = min(candidates, key=rank)
         tx.invoice_id = invoice.id

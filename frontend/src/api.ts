@@ -66,6 +66,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public detail: unknown = null,
   ) {
     super(message);
   }
@@ -81,6 +82,7 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 function describe(status: number, payload: unknown): string {
   const detail = (payload as { detail?: unknown } | null)?.detail;
   if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && "message" in detail) return String((detail as { message: unknown }).message);
   if (Array.isArray(detail)) {
     // Erreurs de validation : on garde les messages métier, rédigés en français.
     const messages = detail
@@ -94,14 +96,15 @@ function describe(status: number, payload: unknown): string {
   return "La demande n'a pas pu aboutir.";
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response;
+  const isForm = body instanceof FormData;
   try {
     response = await fetch(`/api${path}`, {
       method,
       credentials: "same-origin",
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined || isForm ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "Le boîtier ne répond pas. Vérifiez votre connexion au réseau local.");
@@ -112,7 +115,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     // Un 401 sur la tentative de connexion elle-même est une erreur de saisie, pas une
     // session expirée.
     if (response.status === 401 && path !== "/auth/login") onUnauthorized?.();
-    throw new ApiError(response.status, describe(response.status, payload));
+    throw new ApiError(response.status, describe(response.status, payload), (payload as { detail?: unknown } | null)?.detail);
   }
   return payload as T;
 }

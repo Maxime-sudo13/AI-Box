@@ -2,11 +2,15 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { Brand } from "./components/ui";
 import { Account } from "./pages/Account";
+import { Alerts } from "./pages/Alerts";
 import { Audit } from "./pages/Audit";
 import { CompanySettings } from "./pages/CompanySettings";
+import { Data } from "./pages/Data";
+import { DocumentReview } from "./pages/DocumentReview";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Setup } from "./pages/Setup";
+import { Treasury } from "./pages/Treasury";
 import { Users } from "./pages/Users";
 import { useSession } from "./session";
 
@@ -42,6 +46,10 @@ export function App() {
     <Routes>
       <Route element={<Shell />}>
         <Route index element={<Home />} />
+        <Route path="alertes" element={<Alerts />} />
+        <Route path="tresorerie" element={<Treasury />} />
+        <Route path="donnees" element={<Data />} />
+        <Route path="donnees/documents/:id" element={<DocumentReview />} />
         <Route path="parametres/entreprise" element={<CompanySettings />} />
         <Route path="parametres/compte" element={<Account />} />
         {user.is_admin && (

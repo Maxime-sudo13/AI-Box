@@ -341,7 +341,6 @@ def simulate_purchases(world: World, rng: random.Random) -> None:
     while month <= end:
         last = date(month.year, month.month, calendar.monthrange(month.year, month.month)[1])
         food = food_ht_between(month, last)
-        drinks = drinks_ht_between(month, last)
 
         def on(day: int) -> date:
             return month.replace(day=min(day, last.day))
@@ -701,7 +700,7 @@ def render_invoice(inv: Invoice) -> bytes:
         ]
     else:
         rows.append(("Sous-total HT", fr(inv.ht)))
-        for rate, (base, amount) in groups.items():
+        for rate, (_base, amount) in groups.items():
             rows.append((f"TVA {fr(rate, 1)} %", fr(amount)))
         rows.append(("Total TTC (EUR)", fr(inv.ttc)))
     for i, (label, value) in enumerate(rows):

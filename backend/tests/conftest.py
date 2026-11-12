@@ -1,9 +1,7 @@
 import os
 
 # La configuration doit être en place avant l'import de l'application.
-TEST_DATABASE_URL = os.environ.get(
-    "BAB_TEST_DATABASE_URL", "postgresql+psycopg://bab:bab@localhost:5432/bab_test"
-)
+TEST_DATABASE_URL = os.environ.get("BAB_TEST_DATABASE_URL", "postgresql+psycopg://bab:bab@localhost:5432/bab_test")
 os.environ["BAB_DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["BAB_COOKIE_SECURE"] = "false"
 

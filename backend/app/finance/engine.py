@@ -138,8 +138,20 @@ def _change(current: Decimal | None, previous: Decimal | None) -> dict[str, Any]
     }
 
 
-MONTH_NAMES = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
-               "septembre", "octobre", "novembre", "décembre"]  # fmt: skip
+MONTH_NAMES = [
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+]
 
 
 def month_label(d: date) -> str:
@@ -226,12 +238,21 @@ def kpis(ds: Dataset, months: dict[date, Month], selected: date) -> list[dict[st
     if ds.sales and m.days_open and max(s.day for s in ds.sales if month_of(s.day) == selected) < m.end:
         quality = "partial"
         notes.append("Le journal de caisse ne couvre pas tout le mois.")
-    out.append({
-        "key": "revenue", "label": "Chiffre d'affaires HT", "unit": "eur", "value": f(m.revenue),
-        **_change(m.revenue, prev.revenue if prev else None), "good_direction": "up",
-        "formula": "Ventes de caisse HT + factures de vente HT émises dans le mois",
-        "inputs": rev_inputs, "quality": quality if rev_inputs else "missing", "notes": notes, "period": period,
-    })  # fmt: skip
+    out.append(
+        {
+            "key": "revenue",
+            "label": "Chiffre d'affaires HT",
+            "unit": "eur",
+            "value": f(m.revenue),
+            **_change(m.revenue, prev.revenue if prev else None),
+            "good_direction": "up",
+            "formula": "Ventes de caisse HT + factures de vente HT émises dans le mois",
+            "inputs": rev_inputs,
+            "quality": quality if rev_inputs else "missing",
+            "notes": notes,
+            "period": period,
+        }
+    )
 
     # EBE ------------------------------------------------------------------------------------
     used = [c for c in m.charges if BY_KEY[c].group in ("matieres", "externes", "impots", "personnel")]
@@ -242,15 +263,23 @@ def kpis(ds: Dataset, months: dict[date, Month], selected: date) -> list[dict[st
     )
     if "a_classer" in m.charges:
         notes.append("Des dépenses restent « à classer » : elles sont comptées en charges externes.")
-    out.append({
-        "key": "ebe", "label": "EBE estimé", "unit": "eur", "value": f(m.ebe),
-        **_change(m.ebe, prev.ebe if prev else None), "good_direction": "up",
-        "formula": "Chiffre d'affaires HT − achats consommés − charges externes − impôts et taxes − charges de personnel",
-        "inputs": [_input("Chiffre d'affaires HT", m.revenue, "eur", source="voir indicateur")]
-        + charges_inputs(m, ("matieres", "externes", "impots", "personnel")),
-        "quality": quality, "notes": notes, "period": period,
-        "secondary": {"label": "Marge d'EBE", "value": f(m.ratio(m.ebe, m.revenue), 1), "unit": "pct"},
-    })  # fmt: skip
+    out.append(
+        {
+            "key": "ebe",
+            "label": "EBE estimé",
+            "unit": "eur",
+            "value": f(m.ebe),
+            **_change(m.ebe, prev.ebe if prev else None),
+            "good_direction": "up",
+            "formula": "Chiffre d'affaires HT − achats consommés − charges externes − impôts et taxes − charges de personnel",
+            "inputs": [_input("Chiffre d'affaires HT", m.revenue, "eur", source="voir indicateur")]
+            + charges_inputs(m, ("matieres", "externes", "impots", "personnel")),
+            "quality": quality,
+            "notes": notes,
+            "period": period,
+            "secondary": {"label": "Marge d'EBE", "value": f(m.ratio(m.ebe, m.revenue), 1), "unit": "pct"},
+        }
+    )
 
     if ds.is_restaurant:
         food = m.charges.get("alimentaire", ZERO)
@@ -261,57 +290,123 @@ def kpis(ds: Dataset, months: dict[date, Month], selected: date) -> list[dict[st
             "Sans inventaire de stock, le coût matière est approché par les achats du mois : "
             "un gros réapprovisionnement peut le gonfler ponctuellement."
         )
-        out.append({
-            "key": "food_cost", "label": "Coût matière cuisine", "unit": "pct", "value": f(m.ratio(food, m.food_ht), 1),
-            **_change(m.ratio(food, m.food_ht), prev_food_pct), "good_direction": "down",
-            "formula": "Achats alimentaires HT ÷ chiffre d'affaires nourriture HT",
-            "inputs": [
-                _input("Achats alimentaires HT", food, "eur", source=f"{m.sources['alimentaire']['invoices']} facture(s)",
-                       count=m.sources["alimentaire"]["invoices"], link={**month_link, "category": "alimentaire"}),
-                _input("CA nourriture HT", m.food_ht, "eur", source=f"{m.days_open} journée(s) de caisse", count=m.days_open),
-            ],
-            "quality": q, "notes": n, "period": period,
-        })  # fmt: skip
+        out.append(
+            {
+                "key": "food_cost",
+                "label": "Coût matière cuisine",
+                "unit": "pct",
+                "value": f(m.ratio(food, m.food_ht), 1),
+                **_change(m.ratio(food, m.food_ht), prev_food_pct),
+                "good_direction": "down",
+                "formula": "Achats alimentaires HT ÷ chiffre d'affaires nourriture HT",
+                "inputs": [
+                    _input(
+                        "Achats alimentaires HT",
+                        food,
+                        "eur",
+                        source=f"{m.sources['alimentaire']['invoices']} facture(s)",
+                        count=m.sources["alimentaire"]["invoices"],
+                        link={**month_link, "category": "alimentaire"},
+                    ),
+                    _input(
+                        "CA nourriture HT",
+                        m.food_ht,
+                        "eur",
+                        source=f"{m.days_open} journée(s) de caisse",
+                        count=m.days_open,
+                    ),
+                ],
+                "quality": q,
+                "notes": n,
+                "period": period,
+            }
+        )
         q, n = _quality(m, ["boissons"])
-        out.append({
-            "key": "drinks_cost", "label": "Coût matière boissons", "unit": "pct", "value": f(m.ratio(drinks, m.drinks_ht), 1),
-            **_change(m.ratio(drinks, m.drinks_ht), prev.ratio(prev.charges.get("boissons", ZERO), prev.drinks_ht) if prev else None),
-            "good_direction": "down",
-            "formula": "Achats de boissons HT ÷ chiffre d'affaires boissons HT",
-            "inputs": [
-                _input("Achats de boissons HT", drinks, "eur", source=f"{m.sources['boissons']['invoices']} facture(s)",
-                       count=m.sources["boissons"]["invoices"], link={**month_link, "category": "boissons"}),
-                _input("CA boissons HT", m.drinks_ht, "eur", source=f"{m.days_open} journée(s) de caisse", count=m.days_open),
-            ],
-            "quality": q, "notes": n, "period": period,
-        })  # fmt: skip
+        out.append(
+            {
+                "key": "drinks_cost",
+                "label": "Coût matière boissons",
+                "unit": "pct",
+                "value": f(m.ratio(drinks, m.drinks_ht), 1),
+                **_change(
+                    m.ratio(drinks, m.drinks_ht),
+                    prev.ratio(prev.charges.get("boissons", ZERO), prev.drinks_ht) if prev else None,
+                ),
+                "good_direction": "down",
+                "formula": "Achats de boissons HT ÷ chiffre d'affaires boissons HT",
+                "inputs": [
+                    _input(
+                        "Achats de boissons HT",
+                        drinks,
+                        "eur",
+                        source=f"{m.sources['boissons']['invoices']} facture(s)",
+                        count=m.sources["boissons"]["invoices"],
+                        link={**month_link, "category": "boissons"},
+                    ),
+                    _input(
+                        "CA boissons HT",
+                        m.drinks_ht,
+                        "eur",
+                        source=f"{m.days_open} journée(s) de caisse",
+                        count=m.days_open,
+                    ),
+                ],
+                "quality": q,
+                "notes": n,
+                "period": period,
+            }
+        )
 
     personnel = m.group_total("personnel")
     q, n = _quality(m, [c for c in m.charges if BY_KEY[c].group == "personnel"])
     n.append("Salaires nets versés et cotisations prélevées, d'après le relevé bancaire.")
-    out.append({
-        "key": "payroll", "label": "Masse salariale", "unit": "pct", "value": f(m.ratio(personnel, m.revenue), 1),
-        **_change(m.ratio(personnel, m.revenue), prev.ratio(prev.group_total("personnel"), prev.revenue) if prev else None),
-        "good_direction": "down",
-        "formula": "(Salaires + rémunération du gérant + cotisations sociales) ÷ chiffre d'affaires HT",
-        "inputs": charges_inputs(m, ("personnel",)) + [_input("Chiffre d'affaires HT", m.revenue, "eur", source="voir indicateur")],
-        "quality": q, "notes": n, "period": period,
-        "secondary": {"label": "Montant", "value": f(personnel), "unit": "eur"},
-    })  # fmt: skip
+    out.append(
+        {
+            "key": "payroll",
+            "label": "Masse salariale",
+            "unit": "pct",
+            "value": f(m.ratio(personnel, m.revenue), 1),
+            **_change(
+                m.ratio(personnel, m.revenue), prev.ratio(prev.group_total("personnel"), prev.revenue) if prev else None
+            ),
+            "good_direction": "down",
+            "formula": "(Salaires + rémunération du gérant + cotisations sociales) ÷ chiffre d'affaires HT",
+            "inputs": charges_inputs(m, ("personnel",))
+            + [_input("Chiffre d'affaires HT", m.revenue, "eur", source="voir indicateur")],
+            "quality": q,
+            "notes": n,
+            "period": period,
+            "secondary": {"label": "Montant", "value": f(personnel), "unit": "eur"},
+        }
+    )
 
     if m.covers:
         ticket = m.sales_ttc / m.covers if m.sales_ttc else None
         prev_ticket = prev.sales_ttc / prev.covers if prev and prev.covers and prev.sales_ttc else None
-        out.append({
-            "key": "ticket", "label": "Ticket moyen TTC", "unit": "eur", "value": f(ticket),
-            **_change(ticket, prev_ticket), "good_direction": "up",
-            "formula": "Ventes de caisse TTC ÷ nombre de couverts",
-            "inputs": [_input("Ventes de caisse TTC", m.sales_ttc, "eur", source=f"{m.days_open} journée(s) de caisse"),
-                       _input("Couverts servis", m.covers, "count", source=f"{m.days_open} journée(s) de caisse")],
-            "quality": "confirmed", "notes": [], "period": period,
-            "secondary": {"label": "Couverts", "value": m.covers, "unit": "count",
-                          "change_pct": f((m.covers - prev.covers) / prev.covers * 100, 1) if prev and prev.covers else None},
-        })  # fmt: skip
+        out.append(
+            {
+                "key": "ticket",
+                "label": "Ticket moyen TTC",
+                "unit": "eur",
+                "value": f(ticket),
+                **_change(ticket, prev_ticket),
+                "good_direction": "up",
+                "formula": "Ventes de caisse TTC ÷ nombre de couverts",
+                "inputs": [
+                    _input("Ventes de caisse TTC", m.sales_ttc, "eur", source=f"{m.days_open} journée(s) de caisse"),
+                    _input("Couverts servis", m.covers, "count", source=f"{m.days_open} journée(s) de caisse"),
+                ],
+                "quality": "confirmed",
+                "notes": [],
+                "period": period,
+                "secondary": {
+                    "label": "Couverts",
+                    "value": m.covers,
+                    "unit": "count",
+                    "change_pct": f((m.covers - prev.covers) / prev.covers * 100, 1) if prev and prev.covers else None,
+                },
+            }
+        )
     return out
 
 
@@ -323,17 +418,23 @@ def series(ds: Dataset, months: dict[date, Month]) -> list[dict[str, Any]]:
     out = []
     for key in keys:
         m = months[key]
-        out.append({
-            "month": key.isoformat()[:7], "label": month_label(key), "partial": key == current,
-            "revenue": f(m.revenue), "matieres": f(m.group_total("matieres")),
-            "externes": f(m.group_total("externes") + m.group_total("impots")),
-            "personnel": f(m.group_total("personnel")), "ebe": f(m.ebe),
-            "ebe_pct": f(m.ratio(m.ebe, m.revenue), 1),
-            "food_cost_pct": f(m.ratio(m.charges.get("alimentaire", ZERO), m.food_ht), 1) if m.food_ht else None,
-            "drinks_cost_pct": f(m.ratio(m.charges.get("boissons", ZERO), m.drinks_ht), 1) if m.drinks_ht else None,
-            "payroll_pct": f(m.ratio(m.group_total("personnel"), m.revenue), 1),
-            "covers": m.covers or None,
-        })  # fmt: skip
+        out.append(
+            {
+                "month": key.isoformat()[:7],
+                "label": month_label(key),
+                "partial": key == current,
+                "revenue": f(m.revenue),
+                "matieres": f(m.group_total("matieres")),
+                "externes": f(m.group_total("externes") + m.group_total("impots")),
+                "personnel": f(m.group_total("personnel")),
+                "ebe": f(m.ebe),
+                "ebe_pct": f(m.ratio(m.ebe, m.revenue), 1),
+                "food_cost_pct": f(m.ratio(m.charges.get("alimentaire", ZERO), m.food_ht), 1) if m.food_ht else None,
+                "drinks_cost_pct": f(m.ratio(m.charges.get("boissons", ZERO), m.drinks_ht), 1) if m.drinks_ht else None,
+                "payroll_pct": f(m.ratio(m.group_total("personnel"), m.revenue), 1),
+                "covers": m.covers or None,
+            }
+        )
     return out
 
 
@@ -348,11 +449,18 @@ def breakdown(months: dict[date, Month], selected: date) -> list[dict[str, Any]]
         avg = sum((p.charges.get(cat, ZERO) for p in previous), ZERO) / len(previous) if previous else None
         if not amount and not avg:
             continue
-        out.append({
-            "category": cat, "label": BY_KEY[cat].label, "group": BY_KEY[cat].group,
-            "group_label": GROUP_LABELS.get(BY_KEY[cat].group, ""), "amount": f(amount),
-            "share_of_revenue": f(m.ratio(amount, m.revenue), 1),
-            "average_3m": f(avg), "change_vs_average_pct": f((amount - avg) / avg * 100, 1) if avg else None,
-            "invoices": m.sources[cat]["invoices"], "bank": m.sources[cat]["bank"],
-        })  # fmt: skip
+        out.append(
+            {
+                "category": cat,
+                "label": BY_KEY[cat].label,
+                "group": BY_KEY[cat].group,
+                "group_label": GROUP_LABELS.get(BY_KEY[cat].group, ""),
+                "amount": f(amount),
+                "share_of_revenue": f(m.ratio(amount, m.revenue), 1),
+                "average_3m": f(avg),
+                "change_vs_average_pct": f((amount - avg) / avg * 100, 1) if avg else None,
+                "invoices": m.sources[cat]["invoices"],
+                "bank": m.sources[cat]["bank"],
+            }
+        )
     return sorted(out, key=lambda r: -(r["amount"] or 0))
