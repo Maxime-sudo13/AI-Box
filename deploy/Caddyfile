@@ -1,0 +1,34 @@
+{
+	# Aucune communication externe : pas de certificat public, pas de télémétrie.
+	auto_https disable_redirects
+	admin off
+}
+
+# Nom du boîtier sur le réseau local. Le certificat est émis par l'autorité interne de
+# Caddy : il faut installer son certificat racine sur les postes pour éviter l'alerte.
+{$BAB_HOSTNAME:businessaibox.local} {
+	tls internal
+
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# L'interface ne charge rien en dehors du boîtier.
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

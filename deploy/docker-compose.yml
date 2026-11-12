@@ -1,0 +1,54 @@
+# Business AI Box — déploiement sur le boîtier.
+# Usage : cp .env.example .env, renseigner le mot de passe, puis `docker compose up -d --build`.
+name: business-ai-box
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bab
+      POSTGRES_USER: bab
+      POSTGRES_PASSWORD: ${BAB_DB_PASSWORD:?Renseignez BAB_DB_PASSWORD dans deploy/.env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bab -d bab"]
+      interval: 5s
+      retries: 20
+    networks: [internal]
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    environment:
+      BAB_DATABASE_URL: postgresql+psycopg://bab:${BAB_DB_PASSWORD}@db:5432/bab
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    environment:
+      BAB_HOSTNAME: ${BAB_HOSTNAME:-businessaibox.local}
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - caddy-data:/data
+    depends_on: [api]
+    networks: [internal, lan]
+
+networks:
+  # La base et l'API n'ont aucune route vers l'extérieur.
+  internal:
+    internal: true
+  lan: {}
+
+volumes:
+  db-data:
+  caddy-data:
