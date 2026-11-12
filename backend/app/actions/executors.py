@@ -33,7 +33,8 @@ def _send_email(db: Session, company: Company, action: Action) -> dict[str, Any]
     msg["Message-ID"] = make_msgid(domain="business-ai-box.local")
     msg.set_content(p["body"])
     transport = "outbox"
-    if settings.smtp_host:
+    # En mode « zéro communication externe », rien ne sort : le courriel reste dans la boîte d'envoi.
+    if settings.smtp_host and not settings.offline_mode:
         try:
             with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as smtp:
                 if settings.smtp_starttls:

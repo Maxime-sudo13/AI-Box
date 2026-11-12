@@ -44,6 +44,17 @@ class Settings(BaseSettings):
     smtp_starttls: bool = True
     mail_from: str | None = None
 
+    # Mode « zéro communication externe » : aucun connecteur en ligne, aucun courriel envoyé
+    # par SMTP. Le boîtier ne fonctionne qu'avec les données déposées localement.
+    offline_mode: bool = False
+    # Clé de chiffrement des identifiants des connecteurs (32 octets en base64). Vide : une
+    # clé est générée dans le dossier de données, lisible par le seul service.
+    secret_key: str | None = None
+    # Racine autorisée pour les dossiers surveillés : un connecteur ne lit rien en dehors.
+    import_root: str | None = None
+    # Planificateur des synchronisations (désactivé dans les tests).
+    scheduler_enabled: bool = True
+
     # Validité d'une réauthentification pour une action de niveau 3.
     reauth_minutes: int = 5
 

@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Integer,
+    LargeBinary,
     MetaData,
     Numeric,
     String,
@@ -420,3 +421,57 @@ class OutboundEmail(Base):
     transport: Mapped[str] = mapped_column(String(20))  # smtp ou outbox
     message_id: Mapped[str | None] = mapped_column(String(300))
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- Connecteurs (Phase 5) -----------------------------------------------------------------
+
+
+class Connection(Base):
+    """Un logiciel ou une source connectée à une entreprise."""
+
+    __tablename__ = "connections"
+    __table_args__ = (CheckConstraint("status IN ('active', 'error', 'expired', 'paused')", name="status"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    connector: Mapped[str] = mapped_column(String(40))
+    label: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), server_default=text("'active'"))
+    # Réglages non secrets (dossier, serveur, compte bancaire…).
+    settings: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    # Identifiants chiffrés (AES-GCM) : jamais lisibles en base ni renvoyés par l'API.
+    secret: Mapped[bytes | None] = mapped_column(LargeBinary)
+    permissions: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+    interval_minutes: Mapped[int] = mapped_column(Integer, server_default=text("60"))
+    cursor: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class SyncRun(Base):
+    __tablename__ = "sync_runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    connection_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("connections.id", ondelete="CASCADE"), index=True)
+    trigger: Mapped[str] = mapped_column(String(20))  # schedule ou manual
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20))  # running, success, partial, failed
+    stats: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    error: Mapped[str | None] = mapped_column(Text)
+
+
+class ConnectorItem(Base):
+    """Élément déjà récupéré par une connexion : il n'est jamais importé deux fois."""
+
+    __tablename__ = "connector_items"
+    __table_args__ = (UniqueConstraint("connection_id", "external_id", name="uq_connector_items_connection_external"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    connection_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("connections.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(300))
+    document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    outcome: Mapped[str] = mapped_column(String(30))
+    seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

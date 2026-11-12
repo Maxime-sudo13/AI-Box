@@ -17,6 +17,8 @@ dependencies = [
     "pypdfium2>=5.15.2",
     "pytesseract>=0.3.13",
     "httpx>=0.28.1",
+    "cryptography>=50.0.2",
+    "apscheduler>=3.10,<4",
 ]
 
 [dependency-groups]
