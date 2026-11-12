@@ -1,0 +1,17 @@
+# Active les connecteurs en ligne (Qonto, boîte mail) et l'envoi SMTP.
+#
+# Par défaut, l'API du boîtier n'a aucun accès à Internet (réseau Docker interne). Ce fichier
+# lui ajoute un accès sortant, à n'utiliser que si vous connectez des services en ligne :
+#
+#   docker compose -f docker-compose.yml -f docker-compose.connecteurs.yml up -d
+#
+# Seuls les hôtes des connecteurs que vous avez configurés sont contactés (voir la page
+# « Logiciels connectés »). Pour une maîtrise réseau plus fine, filtrez la sortie au pare-feu.
+services:
+  api:
+    environment:
+      BAB_OFFLINE_MODE: "false"
+    networks: [internal, egress]
+
+networks:
+  egress: {}

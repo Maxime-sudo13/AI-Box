@@ -7,7 +7,7 @@ logiciels dans les limites fixées par le dirigeant.
 - **Cahier des charges** : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - **Feuille de route et suivi** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 
-## État actuel — v0.4.0 (Phases 3 et 4 : IA locale et exécution contrôlée)
+## État actuel — v0.5.0 (Phase 5 : connecteurs)
 
 ![Tableau de bord du restaurant de démonstration](docs/captures/1-tableau-de-bord.png)
 
@@ -22,7 +22,9 @@ logiciels dans les limites fixées par le dirigeant.
 | **Autorisations** par type d'action et niveau de risque, validation du dirigeant | ✅ Phase 4 |
 | **Niveau 3** : mot de passe et confirmation explicite, jamais automatique (ordre de virement SEPA) | ✅ Phase 4 |
 | Journal complet des actions, annulation des actions réversibles, boîte d'envoi | ✅ Phase 4 |
-| Connecteurs vers les logiciels du client | Phase 5 |
+| **Connecteurs** : dossier surveillé, boîte mail (IMAP), Qonto ; permissions fines, identifiants chiffrés | ✅ Phase 5 |
+| **Mode « zéro communication externe »** : aucun connecteur en ligne, aucun envoi | ✅ Phase 5 |
+| Industrialisation : mini-PC, mises à jour signées, sauvegardes, pilote | Phase 6 |
 
 Restaurant de démonstration complet : voir [docs/demo.md](docs/demo.md).
 
@@ -85,6 +87,10 @@ docker compose up -d --build
 Le boîtier est alors joignable en HTTPS sur `https://businessaibox.local` (certificat émis par
 l'autorité interne de Caddy). La base, l'API et le modèle d'IA sont sur un réseau Docker sans
 accès sortant. Le modèle se télécharge une fois : `deploy/telecharger-modele.sh qwen2.5:7b`.
+
+Par défaut, le boîtier fonctionne en mode « zéro communication externe ». Pour connecter des
+services en ligne (Qonto, messagerie) ou envoyer des courriels :
+`docker compose -f docker-compose.yml -f docker-compose.connecteurs.yml up -d`.
 
 En développement, l'API utilise l'Ollama déjà installé sur le poste (`http://127.0.0.1:11434`,
 modèle `qwen2.5:7b`, réglables par `BAB_OLLAMA_URL` et `BAB_AI_MODEL`).

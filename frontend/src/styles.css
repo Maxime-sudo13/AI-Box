@@ -1186,3 +1186,22 @@ input.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 
 tr.row-highlight td { background: var(--accent-soft); }
+
+/* Connecteurs */
+.conn-list li + li { border-top: 1px solid var(--line); }
+.conn { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: 14px 20px; align-items: start; padding: 16px 22px; }
+.conn-main { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.conn-main .tag { margin-left: 8px; }
+.conn-icon { font-size: 1.5rem; line-height: 1; flex: none; }
+.conn-perms { display: flex; flex-direction: column; gap: 6px; }
+.conn-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.perm { margin-left: 6px; font-size: 0.7rem; font-weight: 650; padding: 1px 6px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.perm.write { background: #fdeee6; color: #8a3b17; }
+.connector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.connector-card { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.connector-card .btn { align-self: flex-start; margin-top: auto; }
+.connector-card .tag { align-self: flex-start; margin-top: auto; }
+.connector-card.planned { background: var(--surface-2); }
+.connector-top { display: flex; gap: 10px; align-items: center; }
+@media (prefers-color-scheme: dark) { .perm.write { background: #3a2418; color: #f2b391; } }
+@media (max-width: 900px) { .conn { grid-template-columns: minmax(0, 1fr); } .conn-actions { justify-content: flex-start; } }

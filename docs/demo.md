@@ -73,5 +73,8 @@ aucune aide, et les tests automatisés le vérifient à chaque modification.
    l'historique et la boîte d'envoi. Montrer que l'alerte est passée à « prise en compte ».
 8. **Autorisations** : passer « Écrire à un fournisseur » en « Interdit », puis montrer que
    le niveau 3 (virement) ne peut pas être rendu automatique.
-9. **Confidentialité** : débrancher le câble réseau Internet du boîtier. Tout continue de
+9. **Logiciels connectés** : connecter un « Dossier surveillé », y déposer une facture
+   scannée, cliquer « Synchroniser » : elle apparaît dans les données, déjà vérifiée.
+   Montrer que le droit d'écriture (déplacer les fichiers) n'est pas coché par défaut.
+10. **Confidentialité** : débrancher le câble réseau Internet du boîtier. Tout continue de
    fonctionner, y compris le conseiller avec le modèle local.

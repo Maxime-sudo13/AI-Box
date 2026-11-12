@@ -31,9 +31,16 @@ services:
       BAB_SMTP_USER: ${BAB_SMTP_USER:-}
       BAB_SMTP_PASSWORD: ${BAB_SMTP_PASSWORD:-}
       BAB_MAIL_FROM: ${BAB_MAIL_FROM:-}
+      # Mode « zéro communication externe » : aucun connecteur en ligne, aucun envoi SMTP.
+      BAB_OFFLINE_MODE: ${BAB_OFFLINE_MODE:-true}
+      BAB_IMPORT_ROOT: /depot
+      # Clé de chiffrement des identifiants des connecteurs (sinon générée dans /data).
+      BAB_SECRET_KEY: ${BAB_SECRET_KEY:-}
     volumes:
       # Documents originaux importés : à placer sur le disque chiffré du boîtier.
       - documents:/data
+      # Dossiers surveillés (scanner, partage réseau) : seul endroit lisible par les connecteurs.
+      - ${BAB_DEPOT_DIR:-./depot}:/depot
     depends_on:
       db:
         condition: service_healthy

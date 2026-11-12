@@ -47,6 +47,7 @@ export function Shell() {
         ...(hasModule("conseiller") ? [{ to: "/conseiller", label: "Conseiller" }] : []),
         ...(finance ? [{ to: "/automatisation", label: "Automatisation", badge: pendingCount }] : []),
         { to: "/donnees", label: "Données" },
+        { to: "/connecteurs", label: "Logiciels connectés" },
       ],
     },
     {

@@ -7,6 +7,7 @@ import { Alerts } from "./pages/Alerts";
 import { Automation } from "./pages/Automation";
 import { Audit } from "./pages/Audit";
 import { CompanySettings } from "./pages/CompanySettings";
+import { Connectors } from "./pages/Connectors";
 import { Data } from "./pages/Data";
 import { DocumentReview } from "./pages/DocumentReview";
 import { Home } from "./pages/Home";
@@ -54,6 +55,7 @@ export function App() {
         <Route path="tresorerie" element={<Treasury />} />
         <Route path="donnees" element={<Data />} />
         <Route path="donnees/documents/:id" element={<DocumentReview />} />
+        <Route path="connecteurs" element={<Connectors />} />
         <Route path="parametres/entreprise" element={<CompanySettings />} />
         <Route path="parametres/compte" element={<Account />} />
         {user.is_admin && (

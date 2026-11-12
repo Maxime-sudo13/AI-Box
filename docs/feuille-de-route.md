@@ -11,8 +11,8 @@ sections 15 (MVP) et 17 (plan de développement).
 | 2. Intelligence financière | Import de factures, extraction, calculs, graphiques, anomalies | ✅ Terminée (v0.2.0) |
 | 3. IA | Ollama + Qwen, conseiller conversationnel, recommandations justifiées | ✅ Terminée (v0.4.0) |
 | 4. Exécution | Moteur d'actions, niveaux 1/2/3, validations, journal des actions | ✅ Terminée (v0.4.0) |
-| 5. Connecteurs | Socle de connecteurs, première intégration comptable/bancaire | ⏭️ Prochaine |
-| 6. Industrialisation | Mini-PC, durcissement, mises à jour signées, sauvegardes, pilote | À faire |
+| 5. Connecteurs | Socle de connecteurs, première intégration comptable/bancaire | ✅ Terminée (v0.5.0) |
+| 6. Industrialisation | Mini-PC, durcissement, mises à jour signées, sauvegardes, pilote | ⏭️ Prochaine |
 
 ## Avancement du MVP (cahier des charges, §15)
 
@@ -35,6 +35,59 @@ sections 15 (MVP) et 17 (plan de développement).
 | 15 | Premier système d'exécution d'actions contrôlées | ✅ Courriels (SMTP ou boîte d'envoi), tâches, reclassement, ordre de virement SEPA |
 
 ## Journal
+
+### 12 novembre 2026 — v0.5.0, Phase 5 terminée
+
+Livré :
+- **Socle de connecteurs**, conçu pour qu'un connecteur ne puisse pas compromettre le
+  système (cahier des charges, section 10) : il ne reçoit ni la base ni la session, seulement
+  ses réglages, ses identifiants et les permissions accordées. Il renvoie des données
+  normalisées, importées par le circuit habituel (contrôle des doublons, rapprochement).
+  Une panne n'affecte que sa connexion ; un verrou empêche deux synchronisations simultanées.
+- **Permissions fines** (cahier des charges, section 19.2) : chaque connecteur déclare ses
+  droits de lecture et d'écriture ; les droits d'écriture ne sont jamais accordés par défaut.
+- **Identifiants chiffrés** (AES-256-GCM, clé hors base). Ils ne sont jamais renvoyés par
+  l'API ni écrits dans le journal. Un accès révoqué fait passer la connexion en « accès à
+  renouveler ».
+- **Trois connecteurs réels** :
+  - *Dossier surveillé* (sans Internet) : factures et exports CSV déposés par un scanner ou
+    sur un partage, avec une racine imposée (aucune lecture ailleurs sur le disque) ;
+    déplacement des fichiers traités seulement si l'écriture est autorisée.
+  - *Boîte mail* (IMAP : Gmail, Outlook, OVH…) : pièces jointes PDF et images ; dossier ouvert
+    en lecture seule et messages lus sans être marqués, sauf autorisation explicite.
+  - *Qonto* (API officielle, lecture seule) : opérations et solde, soldes reconstitués,
+    reprise incrémentale ; aucune fonction de paiement.
+- **Synchronisation planifiée** (chaque connexion à son rythme), historique des passages,
+  bouton « Synchroniser », pause, déconnexion. Tout est journalisé.
+- **Mode « zéro communication externe »** (section 19.3), actif par défaut dans le
+  déploiement : aucun connecteur en ligne, aucun envoi SMTP. Un fichier Compose séparé
+  ouvre l'accès sortant quand le client le choisit.
+- Catalogue des intégrations prévues (Pennylane, Sage, Cegid, Odoo, HubSpot, Axonaut,
+  Shopify, Microsoft 365, Google Drive), affichées « À venir ».
+
+Vérifié : 106 tests automatisés dont 16 pour les connecteurs (faux serveur IMAP, API Qonto
+simulée au format documenté, racine imposée, chiffrement, verrou, isolation d'une panne,
+planificateur, mode hors ligne). Parcours réel dans le navigateur : connexion d'un dossier,
+import de deux factures et d'un relevé déposés.
+
+Non vérifié — à faire avec un vrai compte :
+- **Qonto** : les appels suivent la documentation de l'API v2 mais n'ont pas pu être testés
+  contre le vrai service (pas d'accès Internet ici). À valider avec une clé de test.
+- **Messagerie** : à valider avec une vraie boîte (Gmail et Outlook exigent un mot de passe
+  d'application, voire OAuth selon la configuration du compte Microsoft).
+
+Limites connues :
+- Si le même compte bancaire est alimenté à la fois par Qonto et par un import CSV, les
+  opérations seront en double : choisir une seule source par compte.
+- Pennylane et les logiciels comptables restent à développer, selon les conditions d'accès
+  aux API de chaque éditeur et les demandes des premiers clients.
+
+### Prochaine étape — Phase 6 (industrialisation)
+
+1. Image d'installation pour mini-PC (Debian), chiffrement du disque, démarrage automatique.
+2. Sauvegardes chiffrées sur support distinct et procédure de restauration testée.
+3. Mises à jour signées, importées et vérifiées hors ligne.
+4. Accès distant par WireGuard, tests de charge, puis pilote chez une entreprise réelle.
 
 ### 12 novembre 2026 — v0.4.0, Phases 3 et 4 terminées
 
