@@ -18,7 +18,5 @@ def list_events(
     db: Session = Depends(get_db),
 ):
     total = db.scalar(select(func.count()).select_from(AuditEvent))
-    items = db.scalars(
-        select(AuditEvent).order_by(AuditEvent.id.desc()).limit(limit).offset(offset)
-    ).all()
+    items = db.scalars(select(AuditEvent).order_by(AuditEvent.id.desc()).limit(limit).offset(offset)).all()
     return AuditPage(items=items, total=total)

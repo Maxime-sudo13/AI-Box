@@ -11,6 +11,11 @@ dependencies = [
     "alembic>=1.14",
     "pydantic-settings>=2.6",
     "argon2-cffi>=23.1",
+    "pdfplumber>=0.11.10",
+    "reportlab>=5.1.0",
+    "python-multipart>=0.0.33",
+    "pypdfium2>=5.15.2",
+    "pytesseract>=0.3.13",
 ]
 
 [dependency-groups]
@@ -22,9 +27,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["shared_data: le module partage un jeu de données construit une seule fois"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]

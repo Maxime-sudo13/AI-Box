@@ -46,9 +46,7 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     user = db.scalar(select(User).where(User.email == body.email).with_for_update())
 
     if user and user.locked_until and user.locked_until > now():
-        audit.record(
-            db, request, "auth.login", actor=user, outcome="denied", details={"reason": "locked"}
-        )
+        audit.record(db, request, "auth.login", actor=user, outcome="denied", details={"reason": "locked"})
         db.commit()
         raise HTTPException(
             status.HTTP_423_LOCKED,
@@ -82,9 +80,7 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     user.locked_until = None
     user.last_login_at = now()
     # Nettoyage opportuniste des sessions expirées de cet utilisateur.
-    db.execute(
-        delete(UserSession).where(UserSession.user_id == user.id, UserSession.expires_at <= now())
-    )
+    db.execute(delete(UserSession).where(UserSession.user_id == user.id, UserSession.expires_at <= now()))
     open_session(db, request, response, user)
     audit.record(db, request, "auth.login", actor=user)
     db.commit()
@@ -123,10 +119,6 @@ def change_password(
     check_password_policy(body.new_password)
     auth.user.password_hash = hash_password(body.new_password)
     # Les autres appareils connectés doivent se réauthentifier.
-    db.execute(
-        delete(UserSession).where(
-            UserSession.user_id == auth.user.id, UserSession.id != auth.session.id
-        )
-    )
+    db.execute(delete(UserSession).where(UserSession.user_id == auth.user.id, UserSession.id != auth.session.id))
     audit.record(db, request, "auth.password_change", actor=auth.user)
     db.commit()

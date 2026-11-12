@@ -52,9 +52,7 @@ def create_company(
     company = Company(**body.model_dump(), enabled_modules=[])
     db.add(company)
     db.flush()
-    audit.record(
-        db, request, "company.create", actor=auth.user, company_id=company.id, target=company.name
-    )
+    audit.record(db, request, "company.create", actor=auth.user, company_id=company.id, target=company.name)
     db.commit()
     return company_out(company, None)
 

@@ -36,24 +36,16 @@ def user_out(user: User) -> UserOut:
 def _set_memberships(db: Session, user: User, memberships: list[MembershipIn]) -> None:
     wanted = {m.company_id: m.role for m in memberships}
     if len(wanted) != len(memberships):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, "Une entreprise est listée plusieurs fois."
-        )
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Une entreprise est listée plusieurs fois.")
     if wanted:
         found = set(db.scalars(select(Company.id).where(Company.id.in_(wanted))))
         if found != set(wanted):
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Entreprise inconnue.")
-    user.memberships = [
-        Membership(company_id=company_id, role=role) for company_id, role in wanted.items()
-    ]
+    user.memberships = [Membership(company_id=company_id, role=role) for company_id, role in wanted.items()]
 
 
 def _other_active_admins(db: Session, user: User) -> int:
-    return db.scalar(
-        select(func.count())
-        .select_from(User)
-        .where(User.is_admin, User.is_active, User.id != user.id)
-    )
+    return db.scalar(select(func.count()).select_from(User).where(User.is_admin, User.is_active, User.id != user.id))
 
 
 @router.get("", response_model=list[UserOut])
@@ -136,11 +128,7 @@ def update_user(
         _set_memberships(db, user, body.memberships)
     if revoke_sessions:
         # L'administrateur qui change son propre mot de passe garde sa session en cours.
-        db.execute(
-            delete(UserSession).where(
-                UserSession.user_id == user.id, UserSession.id != auth.session.id
-            )
-        )
+        db.execute(delete(UserSession).where(UserSession.user_id == user.id, UserSession.id != auth.session.id))
 
     # Le journal retient les champs modifiés, jamais la valeur d'un mot de passe.
     audit.record(

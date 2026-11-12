@@ -25,11 +25,13 @@ CATALOG: tuple[Module, ...] = (
         "finance",
         "Gestion financière",
         "Revenus, dépenses, marges, trésorerie prévisionnelle et impayés.",
+        available=True,
     ),
     Module(
         "documents",
         "Comptabilité et documents",
         "Import et lecture automatique des factures, classement et rapprochement.",
+        available=True,
     ),
     Module(
         "ventes",

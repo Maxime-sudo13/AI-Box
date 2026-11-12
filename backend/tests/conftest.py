@@ -37,12 +37,39 @@ def schema():
     engine.dispose()
 
 
-@pytest.fixture(autouse=True)
-def clean_tables(schema):
-    yield
+def truncate_all() -> None:
     tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture(autouse=True)
+def clean_tables(schema, request):
+    yield
+    # Les modules marqués « shared_data » partagent un jeu de données coûteux à construire :
+    # il est nettoyé à la fin du module (voir la fixture correspondante).
+    if not request.node.get_closest_marker("shared_data"):
+        truncate_all()
+
+
+@pytest.fixture(scope="session")
+def data_dir(tmp_path_factory):
+    path = tmp_path_factory.mktemp("bab-data")
+    os.environ["BAB_DATA_DIR"] = str(path)
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    return path
+
+
+@pytest.fixture(scope="session")
+def demo_files(tmp_path_factory):
+    """Fichiers du restaurant de démonstration, générés une fois pour toute la session."""
+    from app.demo.restaurant import generate
+
+    out = tmp_path_factory.mktemp("demo") / "restaurant"
+    generate(out)
+    return out
 
 
 @pytest.fixture

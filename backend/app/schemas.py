@@ -46,9 +46,7 @@ class ORMModel(BaseModel):
 
 class CompanyIn(BaseModel):
     name: Name
-    legal_form: Annotated[str, StringConstraints(strip_whitespace=True, max_length=50)] | None = (
-        None
-    )
+    legal_form: Annotated[str, StringConstraints(strip_whitespace=True, max_length=50)] | None = None
     siren: Siren | None = None
     sector: ShortText | None = None
 
