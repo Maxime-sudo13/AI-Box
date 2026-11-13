@@ -80,6 +80,25 @@ def test_specification_questions(bistrot, question, intent, expected):
     assert all(f["source"] for f in reply["facts"])
 
 
+def test_best_customer(bistrot):
+    reply = ask(bistrot, "quelle est mon meilleur client?")["messages"][-1]
+    assert reply["generation"]["intents"] == ["customers"]
+    content = reply["content"]
+    assert "Votre premier client est" in content and "caisse" in content
+    # Le client qui a une facture échue est signalé, même s'il est bien classé.
+    assert "Delmas Conseil" in content and "factures échues non réglées" in content
+    # … et le meilleur client selon l'argent réellement encaissé est indiqué.
+    assert "réellement encaissé" in content
+    labels = " ".join(f["label"] for f in reply["facts"])
+    assert "Ventes HT" in labels and "Part" in labels
+
+
+def test_unknown_question_says_so(bistrot):
+    reply = ask(bistrot, "Quel temps fera-t-il demain ?")["messages"][-1]
+    assert reply["generation"]["intents"] == ["general"]
+    assert "pas reconnu" in reply["content"]
+
+
 def test_premise_is_corrected(bistrot):
     reply = ask(bistrot, "Pourquoi mon bénéfice a-t-il diminué en septembre ?")["messages"][-1]
     assert reply["generation"]["month"].endswith("-09")
@@ -117,6 +136,22 @@ def test_llm_invented_number_is_rejected(bistrot):
     assert reply["generation"]["guard"] == "rejected"
     assert "987654" in reply["generation"]["unverified"]
     assert "987" not in reply["content"]
+
+
+def test_llm_level_presented_as_increase_is_rejected(bistrot):
+    """Chiffres exacts mais sens déformé : « a augmenté de 31 % » pour une part du CA."""
+
+    def misread(prompt):
+        facts = prompt.split("Faits calculés (seule source autorisée) :\n", 1)[1]
+        line = next(line for line in facts.splitlines() if " %" in line and "Marge" in line)
+        ref, rest = line.split("] ", 1)
+        value = rest.split(" : ", 1)[1].split(" (", 1)[0]
+        return f"La marge a augmenté de {value} {ref}]."
+
+    set_llm(FakeLLM(misread))
+    reply = ask(bistrot, "Comment s'est passé le mois de juin ?")["messages"][-1]
+    assert reply["generation"]["writer"] == "engine" and reply["generation"]["guard"] == "rejected"
+    assert reply["generation"]["misread"]
 
 
 def test_llm_failure_falls_back_to_engine(bistrot):

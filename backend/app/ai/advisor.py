@@ -76,7 +76,18 @@ INTENTS: list[tuple[str, str, tuple[str, ...]]] = [
     ("plan", r"\bplan\b|90 jours|feuille de route|que (dois|devrais|faire)|quoi faire", ("plan_90",)),
     ("priorities", r"priorit|problemes?|alertes?|risques?|urgent", ("priorities",)),
     ("treasury", r"tresorerie|solde|liquidit|cash|banque", ("treasury",)),
-    ("receivables", r"impaye|relanc|creance|retard de paiement|me doi(t|vent)", ("receivables",)),
+    (
+        "customers",
+        r"meilleurs?.{0,12}clients?|(principaux|plus gros|gros|plus importants?|premiers?|top|classement).{0,12}clients?"
+        r"|\bclients?\b.{0,30}(meilleur|principa|important|fidele|classement|inactif|perdu|rapporte|depense)"
+        r"|qui (sont|est) mes clients|\bmes clients\b",
+        ("customers",),
+    ),
+    (
+        "receivables",
+        r"impaye|relanc|creance|retard de paiement|pai\w* en retard|pas (encore )?paye|me doi(t|vent)",
+        ("receivables",),
+    ),
     ("subscriptions", r"abonnement|contrat|resili", ("subscriptions",)),
     ("suppliers", r"fournisseur|achats?|prix d'?achat|hausse de prix", ("suppliers",)),
     ("documents", r"documents?|justificatif|factures? (a verifier|manquante)|doublon", ("documents_status",)),
@@ -90,6 +101,8 @@ Tu reformules une analyse déjà calculée, en français clair, chaleureux et pr
 Règles impératives :
 - N'utilise QUE les faits fournis. N'invente aucun chiffre, aucun pourcentage, aucune date.
 - Recopie chaque chiffre exactement comme il est écrit dans les faits, suivi de sa référence, par exemple « 52 477 € [F1] ».
+- Garde le sens exact de chaque chiffre : une part du chiffre d'affaires (« représente 31 % ») n'est pas une hausse ;
+  n'écris « hausse », « baisse » ou « augmente de » que si le libellé du fait est une évolution ou un écart.
 - Distingue les estimations et hypothèses des données vérifiées quand c'est le cas.
 - Si les faits ne permettent pas de répondre, dis-le simplement.
 - Ne promets aucune action : tu n'exécutes rien, le dirigeant décide.
@@ -184,6 +197,29 @@ def verify_numbers(candidate: str, allowed_text: str, facts: list[dict[str, Any]
     return unknown
 
 
+_DIRECTION = re.compile(r"(augment|hausse|baiss|diminu|progress|recul|chut|grimp)\w*\s+(de\s+)?$")
+_CHANGE_LABEL = re.compile(r"volution|variation|cart|hausse|baisse|d.rive|par rapport|vs", re.I)
+
+
+def verify_meaning(candidate: str, facts: list[dict[str, Any]]) -> list[str]:
+    """Pourcentages présentés comme une hausse ou une baisse alors que le fait est un niveau.
+
+    Exemple refusé : « le coût matière a augmenté de 31,0 % [F5] » quand F5 est « Coût matière
+    cuisine en % du CA ». Le chiffre est juste, mais son sens est faux.
+    """
+    by_id = {f["id"]: f for f in facts}
+    wrong = []
+    for m in re.finditer(r"\[(F\d+)\]", candidate):
+        f = by_id.get(m.group(1))
+        if not f or f["unit"] != "pct" or _CHANGE_LABEL.search(f["label"]):
+            continue
+        before = candidate[max(0, m.start() - 60) : m.start()]
+        before = before[: before.rfind(f["display"])] if f["display"] in before else before
+        if _DIRECTION.search(before.rstrip().lower() + " "):
+            wrong.append(f"{f['id']} : {f['label']}")
+    return wrong
+
+
 def answer(
     question: str,
     ds: Dataset,
@@ -204,6 +240,15 @@ def answer(
 
     composer = Composer()
     agents_used: list[str] = []
+    if intents == ["general"]:
+        composer.section(
+            "Question non reconnue",
+            [
+                "Je n'ai pas reconnu précisément votre question. Voici l'essentiel du mois ; vous pouvez aussi me "
+                "demander par exemple : « Qui sont mes meilleurs clients ? », « Où est-ce que je perds de l'argent ? », "
+                "« Quelle est ma trésorerie ? », « Puis-je embaucher ? »."
+            ],
+        )
     for tool in tools:
         agent = AGENTS[TOOL_AGENT[tool]]
         if agent.key not in agents_used:
@@ -244,6 +289,15 @@ def answer(
         return result
     unknown = verify_numbers(reply.text, engine_text + " " + question, facts)
     result.generation.update(model=reply.model, duration_ms=int((time.monotonic() - started) * 1000))
+    if not unknown and (misread := verify_meaning(reply.text, facts)):
+        # Chiffres exacts, mais un niveau présenté comme une évolution : rédaction écartée.
+        result.generation.update(
+            writer="engine",
+            guard="rejected",
+            misread=misread[:10],
+            note="La rédaction du modèle déformait le sens d'un chiffre : réponse du moteur conservée.",
+        )
+        return result
     if unknown:
         # Un chiffre absent des faits : la rédaction du modèle est écartée.
         result.generation.update(

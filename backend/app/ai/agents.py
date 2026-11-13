@@ -42,7 +42,13 @@ AGENTS: dict[str, Agent] = {
                 "hiring",
             ),
         ),
-        Agent("commercial", "Agent commercial", "Ventes, fréquentation et clients.", frozenset({"ventes"}), ("sales",)),
+        Agent(
+            "commercial",
+            "Agent commercial",
+            "Ventes, fréquentation et clients.",
+            frozenset({"ventes"}),
+            ("sales", "customers"),
+        ),
         Agent(
             "achats",
             "Agent achats",

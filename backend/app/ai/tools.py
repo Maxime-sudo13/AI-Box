@@ -491,6 +491,116 @@ def sales(c: Composer, ctx: Context, **_: Any) -> None:
         )
 
 
+def customers(c: Composer, ctx: Context, **_: Any) -> None:
+    """Clients facturés sur 12 mois : classement, part du chiffre d'affaires, paiement, inactivité."""
+    today = ctx.ds.today
+    since = today - timedelta(days=365)
+    by_party: dict = defaultdict(list)
+    for inv in ctx.ds.sales_invoices:
+        if inv.issue_date and inv.issue_date >= since and inv.total_ht and inv.party_id:
+            by_party[inv.party_id].append(inv)
+    if not by_party:
+        c.section(
+            "Clients",
+            [
+                "Aucune facture de vente à un client identifié sur les 12 derniers mois : les ventes viennent de la "
+                "caisse (clients de passage), qui ne permet pas de distinguer les clients. Importez vos factures de "
+                "vente pour obtenir un classement."
+            ],
+        )
+        return
+
+    totals = {p: sum((i.total_ht for i in invs), ZERO) for p, invs in by_party.items()}
+    ranking = sorted(totals, key=lambda p: -totals[p])
+    invoiced = sum(totals.values(), ZERO)
+    start = month_of(since)
+    revenue = sum((m.revenue for k, m in ctx.months.items() if start <= k < month_of(today)), ZERO)
+
+    def overdue(party: Any) -> list:
+        return [i for i in by_party[party] if not i.paid_on and i.due_date and i.due_date < today and i.total_ttc]
+
+    def delay(party: Any) -> Decimal | None:
+        days = [(i.paid_on - i.issue_date).days for i in by_party[party] if i.paid_on and i.issue_date]
+        return D(statistics.mean(days)) if days else None
+
+    lines = []
+    share = _ratio(invoiced, revenue) if revenue >= invoiced else None
+    lines.append(
+        f"Ventes facturées à des clients identifiés sur 12 mois : {c.fact('cust:total', 'Ventes HT facturées aux clients identifiés (12 mois)', invoiced, source='factures de vente', link='/donnees?direction=sale')}"
+        + (
+            f", soit {c.fact('cust:share', 'Part des ventes facturées dans le chiffre d’affaires (12 mois)', share, 'pct')} du chiffre d'affaires ; "
+            "le reste vient de la caisse (clients de passage, non identifiés)."
+            if share is not None
+            else "."
+        )
+    )
+
+    best = ranking[0]
+    name = ctx.ds.party_name(best)
+    best_line = (
+        f"Votre premier client est **{name}** : {c.fact('cust:0', f'Ventes HT {name} (12 mois)', totals[best], source='factures de vente', link='/donnees?q=' + name)}"
+        f" sur 12 mois en {c.fact('cust:0:n', f'Factures émises à {name} (12 mois)', len(by_party[best]), 'count')} facture(s), "
+        f"soit {c.fact('cust:0:share', f'Part de {name} dans les ventes facturées', _ratio(totals[best], invoiced), 'pct')} de vos ventes facturées."
+    )
+    if (d := delay(best)) is not None:
+        best_line += f" Il paie en moyenne {c.fact('cust:0:delay', f'Délai moyen de paiement {name}', d, 'days', source='factures et relevé bancaire')} après la facture."
+    lines.append(best_line)
+    if late := overdue(best):
+        amount = sum((i.total_ttc for i in late), ZERO)
+        lines.append(
+            f"Attention : {name} a aussi {c.fact('cust:0:late', f'Factures échues impayées {name} (TTC)', amount, source='factures de vente et relevé bancaire', link='/alertes')} "
+            "de factures échues non réglées. Un bon client en volume n'est pas forcément un bon payeur : relancez avant d'accepter une nouvelle commande importante."
+        )
+        paid = {p: sum((i.total_ht for i in by_party[p] if i.paid_on), ZERO) for p in ranking}
+        best_paid = max(ranking, key=lambda p: paid[p])
+        if best_paid != best and paid[best_paid] > paid[best]:
+            n = ctx.ds.party_name(best_paid)
+            lines.append(
+                f"Si l'on ne compte que l'argent réellement encaissé, votre meilleur client est **{n}** : "
+                f"{c.fact('cust:paid', f'Ventes HT payées par {n} (12 mois)', paid[best_paid], source='factures de vente et relevé bancaire', link='/donnees?q=' + n)}"
+                f" réglés, contre {c.fact('cust:0:paid', f'Ventes HT payées par {name} (12 mois)', paid[best], source='factures de vente et relevé bancaire')} pour {name}."
+            )
+    if (s0 := _ratio(totals[best], invoiced)) is not None and s0 >= 40 and len(ranking) > 1:
+        lines.append(
+            "Dépendance : ce client pèse lourd dans vos ventes facturées. Perdre ce client se verrait immédiatement ; diversifiez vos clients professionnels."
+        )
+
+    others = []
+    for i, party in enumerate(ranking[1:5], start=1):
+        n = ctx.ds.party_name(party)
+        extra = " (factures échues non réglées)" if overdue(party) else ""
+        others.append(
+            f"{n} : {c.fact(f'cust:{i}', f'Ventes HT {n} (12 mois)', totals[party], source='factures de vente', link='/donnees?q=' + n)}{extra}"
+        )
+    if others:
+        lines.append("Viennent ensuite : " + " ; ".join(others) + ".")
+
+    payers = [(p, d) for p in ranking if (d := delay(p)) is not None and not overdue(p)]
+    if len(payers) > 1:
+        p, d = min(payers, key=lambda pd: pd[1])
+        if p != best:
+            n = ctx.ds.party_name(p)
+            lines.append(
+                f"Meilleur payeur : {n}, réglé en moyenne en {c.fact('cust:fast', f'Délai moyen de paiement {n}', d, 'days', source='factures et relevé bancaire')}."
+            )
+
+    quiet = []
+    for party in ranking:
+        last = max(i.issue_date for i in by_party[party])
+        if len(by_party[party]) >= 2 and (today - last).days > 90:
+            n = ctx.ds.party_name(party)
+            quiet.append(
+                f"{n} (dernière facture il y a {c.fact(f'cust:quiet:{n}', f'Jours depuis la dernière facture {n}', (today - last).days, 'days')})"
+            )
+    if quiet:
+        lines.append(
+            "Clients réguliers sans commande depuis plus de 3 mois : "
+            + ", ".join(quiet[:3])
+            + ". Une prise de contact peut les faire revenir."
+        )
+    c.section("Vos clients (12 derniers mois)", lines)
+
+
 # --- Agent administratif ----------------------------------------------------------------------
 
 
@@ -530,6 +640,7 @@ TOOLS = {
     "suppliers": suppliers,
     "subscriptions": subscriptions,
     "sales": sales,
+    "customers": customers,
     "receivables": receivables,
     "documents_status": documents_status,
 }
