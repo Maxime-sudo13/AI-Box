@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     ollama_url: str = "http://127.0.0.1:11434"
     ai_model: str = "qwen2.5:7b"
     ai_timeout_seconds: int = 120
+    # Choix des outils d'analyse par le modèle : « secours » (seulement pour les questions que
+    # les mots-clés ne reconnaissent pas : rapide sur un boîtier sans carte graphique),
+    # « toujours » (chaque question, mots-clés en secours) ou « non ».
+    ai_routing: str = "secours"
 
     # Envoi des courriels (Phase 4). Sans serveur SMTP, les courriels autorisés sont
     # conservés dans la boîte d'envoi locale, consultables et téléchargeables.

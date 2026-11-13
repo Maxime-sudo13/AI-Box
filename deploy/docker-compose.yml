@@ -27,6 +27,7 @@ services:
       BAB_DATABASE_URL: postgresql+psycopg://bab:${BAB_DB_PASSWORD}@db:5432/bab
       BAB_OLLAMA_URL: http://ollama:11434
       BAB_AI_MODEL: ${BAB_AI_MODEL:-qwen2.5:7b}
+      BAB_AI_ROUTING: ${BAB_AI_ROUTING:-secours}
       # Envoi des courriels autorisés (facultatif). Sans serveur SMTP : boîte d'envoi locale.
       BAB_SMTP_HOST: ${BAB_SMTP_HOST:-}
       BAB_SMTP_PORT: ${BAB_SMTP_PORT:-587}

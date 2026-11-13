@@ -296,8 +296,11 @@ function MessageView({
           </span>
         ))}
         <span className="muted small">
+          {g.routing === "model" ? "Question comprise par l'IA · " : ""}
           {g.writer === "llm" ? `Rédigé par ${g.model} · chiffres contrôlés` : "Rédigé par le moteur de calcul"}
-          {g.guard === "rejected" ? " · rédaction de l'IA écartée (chiffre non vérifié)" : ""} · {message.facts.length} fait(s)
+          {g.guard === "rejected" ? ` · rédaction de l'IA écartée (${g.misread?.length ? "sens d'un chiffre déformé" : "chiffre non vérifié"})` : ""}
+          {" · "}
+          {message.facts.length} fait(s)
         </span>
       </div>
     </div>

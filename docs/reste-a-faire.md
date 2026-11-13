@@ -91,14 +91,15 @@ Classées par rapport valeur / effort.
 
 ### C2. IA
 
-8. **Le modèle choisit lui-même les agents et les outils** (taille M). Il ne calcule toujours
+8. ✅ **Fait (v0.6.2)** — **Le modèle choisit lui-même les agents et les outils** (taille M). Il ne calcule toujours
    rien : il désigne seulement les outils à appeler. Aujourd'hui, les intentions sont
    reconnues par mots-clés, et une formulation inattendue reçoit une réponse générique. Le
    routage par mots-clés reste en secours.
 9. **Brouillons de courriels rédigés par l'IA** à partir des modèles actuels, avec le même
    contrôle des chiffres (taille S).
 10. **« Expliquer ce graphique »** : un bouton sur chaque graphique (taille S).
-11. **Banc d'essai des modèles** (taille S) :
+11. ◐ **Commencé (v0.6.2)** : `scripts/banc_routage.py` mesure le choix des outils. Reste la
+    qualité des rédactions. **Banc d'essai des modèles** (taille S) :
     - script qui pose 30 questions de référence à n'importe quel modèle, et mesure le taux
       d'acceptation et le temps de réponse ;
     - permet de choisir objectivement entre Qwen, Mistral, Llama… à chaque nouvelle version.

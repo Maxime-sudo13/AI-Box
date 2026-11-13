@@ -31,7 +31,7 @@ class LLMClient(Protocol):
 
     def available(self) -> bool: ...
 
-    def chat(self, system: str, user: str, *, temperature: float = 0.2) -> LLMReply: ...
+    def chat(self, system: str, user: str, *, temperature: float = 0.2, json_mode: bool = False) -> LLMReply: ...
 
 
 class OllamaClient:
@@ -59,19 +59,18 @@ class OllamaClient:
             self._available = False
         return self._available
 
-    def chat(self, system: str, user: str, *, temperature: float = 0.2) -> LLMReply:
+    def chat(self, system: str, user: str, *, temperature: float = 0.2, json_mode: bool = False) -> LLMReply:
         started = time.monotonic()
+        body = {
+            "model": self.model,
+            "stream": False,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "options": {"temperature": temperature, "num_ctx": 8192},
+        }
+        if json_mode:
+            body["format"] = "json"  # Ollama contraint alors la sortie à un JSON valide
         try:
-            response = httpx.post(
-                f"{self.url}/api/chat",
-                json={
-                    "model": self.model,
-                    "stream": False,
-                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                    "options": {"temperature": temperature, "num_ctx": 8192},
-                },
-                timeout=self.timeout,
-            )
+            response = httpx.post(f"{self.url}/api/chat", json=body, timeout=self.timeout)
             response.raise_for_status()
             text = response.json()["message"]["content"].strip()
         except (httpx.HTTPError, KeyError, ValueError) as exc:

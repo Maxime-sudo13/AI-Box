@@ -24,6 +24,8 @@ export interface ChatMessage {
     note?: string;
     guard?: "passed" | "rejected";
     unverified?: string[];
+    misread?: string[];
+    routing?: "keywords" | "model";
     duration_ms?: number;
     intents?: string[];
     month?: string;

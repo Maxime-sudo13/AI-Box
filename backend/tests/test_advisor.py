@@ -16,13 +16,17 @@ class FakeLLM:
 
     name = "faux-modele"
 
-    def __init__(self, reply=None, available=True, fail=False):
+    def __init__(self, reply=None, available=True, fail=False, route='{"outils": ["month_summary"]}'):
         self.reply, self._available, self.fail, self.prompts = reply, available, fail, []
+        self.route, self.routed = route, []
 
     def available(self):
         return self._available
 
-    def chat(self, system, user, *, temperature=0.2):
+    def chat(self, system, user, *, temperature=0.2, json_mode=False):
+        if "Tu aiguilles" in system:  # choix des outils
+            self.routed.append(user)
+            return LLMReply(self.route(user) if callable(self.route) else self.route, self.name, 5)
         self.prompts.append((system, user))
         if self.fail:
             raise LLMUnavailable("délai dépassé")
@@ -194,3 +198,58 @@ def test_verify_numbers_tolerates_rounding_only():
     facts = [{"value": 52477.18, "unit": "eur"}, {"value": 17.6, "unit": "pct"}]
     assert verify_numbers("CA de 52 477 € et marge de 17,6 %", "", facts) == []
     assert verify_numbers("CA de 53 000 €", "", facts) == ["53000"]
+
+
+# --- Choix des outils par le modèle ---------------------------------------------------------
+
+
+def test_model_routes_unrecognised_question(bistrot):
+    fake = FakeLLM(
+        "Rédaction impossible à valider : 123 456 €.", route='{"outils": ["treasury", "investment_capacity"]}'
+    )
+    set_llm(fake)
+    reply = ask(bistrot, "Est-ce que je peux partir trois semaines en vacances cet été sans stress ?")["messages"][-1]
+    g = reply["generation"]
+    assert g["routing"] == "model" and g["intents"] == ["ia:treasury", "ia:investment_capacity"]
+    assert "Trésorerie" in reply["content"] and "pas reconnu" not in reply["content"]
+    # Le modèle ne reçoit que la question et la liste des outils, aucune donnée.
+    assert fake.routed == ["Question : Est-ce que je peux partir trois semaines en vacances cet été sans stress ?"]
+
+
+def test_keyword_questions_do_not_call_the_router(bistrot):
+    fake = FakeLLM("x")
+    set_llm(fake)
+    reply = ask(bistrot, "Quelle est ma trésorerie ?")["messages"][-1]
+    assert reply["generation"]["routing"] == "keywords" and fake.routed == []
+
+
+def test_model_says_out_of_scope(bistrot):
+    set_llm(FakeLLM("x", route='{"outils": []}'))
+    reply = ask(bistrot, "Quel temps fera-t-il demain à Lyon ?")["messages"][-1]
+    assert reply["generation"]["intents"] == ["hors_sujet"]
+    assert "Hors de mon périmètre" in reply["content"] and reply["facts"] == []
+
+
+@pytest.mark.parametrize(
+    "route",
+    ["je pense qu'il faut la trésorerie", '{"outils": ["supprimer_tout", "../../etc"]}', '{"outils": "treasury"}'],
+)
+def test_unusable_model_choice_falls_back_to_keywords(bistrot, route):
+    # Rédaction volontairement invalide : on lit le texte du moteur.
+    set_llm(FakeLLM("Invention : 123 456 €.", route=route))
+    reply = ask(bistrot, "Est-ce que je peux partir en vacances ?")["messages"][-1]
+    assert reply["generation"]["intents"] == ["general"] and "pas reconnu" in reply["content"]
+
+
+def test_parse_choice_filters_unknown_tools():
+    from app.ai.routing import TOOL_GUIDE, parse_choice
+    from app.ai.tools import TOOLS
+
+    assert set(TOOL_GUIDE) == set(TOOLS)  # chaque outil est décrit au modèle
+    assert parse_choice('Voici : {"outils": ["sales", "inconnu", "sales", "customers", "treasury", "losses"]}') == [
+        "sales",
+        "customers",
+        "treasury",
+    ]
+    assert parse_choice('{"outils": []}') == []
+    assert parse_choice("{pas du json}") is None

@@ -16,6 +16,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+from app.config import get_settings
 from app.extraction.text import fold, to_decimal
 from app.finance.data import Dataset, month_of
 from app.finance.engine import Month, complete_months
@@ -23,6 +24,7 @@ from app.finance.engine import Month, complete_months
 from .agents import AGENTS, TOOL_AGENT, scoped
 from .facts import Composer
 from .llm import LLMClient, LLMUnavailable
+from .routing import route_with_model
 from .tools import TOOLS, Context
 
 MONTHS = {
@@ -73,6 +75,11 @@ INTENTS: list[tuple[str, str, tuple[str, ...]]] = [
         ("losses", "top_charges"),
     ),
     ("compare", r"compar|evolution|tendance|derniers mois", ("compare_months",)),
+    (
+        "month",
+        r"comment s'?est (passe|deroule)|comment (a ete|etait|ca s'est passe)|(chiffres|resultats?) (du|de) mois",
+        ("month_summary",),
+    ),
     ("plan", r"\bplan\b|90 jours|feuille de route|que (dois|devrais|faire)|quoi faire", ("plan_90",)),
     ("priorities", r"priorit|problemes?|alertes?|risques?|urgent", ("priorities",)),
     ("treasury", r"tresorerie|solde|liquidit|cash|banque", ("treasury",)),
@@ -237,10 +244,34 @@ def answer(
         month = completed[-1] if completed else month_of(ds.today)
     intents, tools = route(question)
     params = parse_params(question)
+    routing: dict[str, Any] = {"routing": "keywords"}
+    mode = get_settings().ai_routing
+    llm_ready = llm is not None and llm.available()
+    out_of_scope = False
+    if llm_ready and (mode == "toujours" or (mode == "secours" and intents == ["general"])):
+        chosen, ms = route_with_model(question, llm)  # type: ignore[arg-type]
+        if chosen:
+            intents, tools = [f"ia:{t}" for t in chosen], chosen
+            routing = {"routing": "model", "routing_ms": ms}
+        elif chosen == [] and intents == ["general"]:
+            out_of_scope = True
+            routing = {"routing": "model", "routing_ms": ms}
+        elif chosen is None:
+            routing = {"routing": "keywords", "routing_note": "choix du modèle inexploitable"}
 
     composer = Composer()
     agents_used: list[str] = []
-    if intents == ["general"]:
+    if out_of_scope:
+        intents, tools = ["hors_sujet"], []
+        composer.section(
+            "Hors de mon périmètre",
+            [
+                "Cette question ne porte pas sur les données de votre entreprise que je peux analyser (ventes, "
+                "achats, banque, documents). Vous pouvez me demander par exemple : « Qui sont mes meilleurs "
+                "clients ? », « Où est-ce que je perds de l'argent ? », « Quelle est ma trésorerie ? »."
+            ],
+        )
+    elif intents == ["general"]:
         composer.section(
             "Question non reconnue",
             [
@@ -265,14 +296,14 @@ def answer(
         {f["link"].split("#", 1)[1] for f in facts if f.get("link") and f["link"].startswith("/alertes#")}
     )
     result = Answer(engine_text, engine_text, facts, agents_used, intents, month.isoformat()[:7], alert_refs=alert_refs)
-    result.generation = {"writer": "engine", "model": None}
+    result.generation = {"writer": "engine", "model": None, **routing}
 
     if llm is None:
         result.generation["note"] = "IA désactivée sur ce boîtier : réponse rédigée par le moteur de calcul."
         return result
     if not facts:
         return result
-    if not llm.available():
+    if not llm_ready:
         result.generation["note"] = "Modèle local indisponible : réponse rédigée par le moteur de calcul."
         return result
     prompt = (

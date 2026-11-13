@@ -31,6 +31,7 @@ services:
       # Ollama de l'ordinateur hôte.
       BAB_OLLAMA_URL: ${BAB_OLLAMA_URL:-http://host.docker.internal:11434}
       BAB_AI_MODEL: ${BAB_AI_MODEL:-qwen2.5:7b}
+      BAB_AI_ROUTING: ${BAB_AI_ROUTING:-secours}
       BAB_IMPORT_ROOT: /depot
       BAB_BACKUP_DIR: /sauvegardes
       BAB_OFFLINE_MODE: "false"

@@ -54,6 +54,24 @@ Suivez le déroulé de [demo.md](demo.md). Pour l'IA en particulier :
 Pour tester le **dossier surveillé** : dans **Logiciels connectés**, connectez le dossier
 `.` puis déposez des factures PDF dans `deploy/depot/` et cliquez sur « Synchroniser ».
 
+## Mesurer l'IA sur votre PC
+
+Le conseiller reconnaît les questions courantes par mots-clés. Pour une question formulée
+autrement, c'est le modèle qui choisit les analyses à lancer (« Question comprise par l'IA »
+sous la réponse). Pour mesurer si votre modèle choisit bien, depuis le dossier AI-Box :
+
+```
+docker compose -f deploy/docker-compose.local.yml exec api python scripts/banc_routage.py
+```
+
+Le script pose 22 questions inhabituelles (dont 3 hors sujet ou malveillantes) et affiche le
+taux de bons choix et le temps moyen. Envoyez-moi le résultat : il sert à choisir le modèle et
+le matériel. Seules la question et la liste des analyses sont envoyées au modèle, jamais vos
+données.
+
+Pour que le modèle choisisse les analyses de chaque question (plus lent sans carte graphique),
+ajoutez `BAB_AI_ROUTING=toujours` dans `deploy/.env`, puis relancez le script de lancement.
+
 ## En cas de problème
 
 | Symptôme | Solution |
