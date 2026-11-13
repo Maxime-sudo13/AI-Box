@@ -114,6 +114,7 @@ export function Shell() {
           <button className="btn ghost" onClick={() => void signOut()}>
             Déconnexion
           </button>
+          <span className="app-version">Version {__APP_VERSION__}</span>
         </div>
       </aside>
       <main className="content">

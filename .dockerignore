@@ -1,0 +1,12 @@
+# Contexte de construction de l'interface (deploy/Dockerfile.web) : on n'envoie pas à Docker
+# les dépendances et fichiers générés présents sur le poste.
+.git
+frontend/node_modules
+frontend/dist
+frontend/tsconfig.tsbuildinfo
+backend/.venv
+backend/data
+deploy/depot
+deploy/sauvegardes
+deploy/.env
+dist

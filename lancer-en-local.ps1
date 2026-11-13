@@ -2,6 +2,15 @@
 # Lancer depuis PowerShell :  .\lancer-en-local.ps1
 # (si Windows bloque le script : Set-ExecutionPolicy -Scope Process Bypass, puis relancer)
 $ErrorActionPreference = "Stop"
+Set-Location $PSScriptRoot
+
+# Récupère la dernière version du code si le dossier vient de « git clone ».
+# (Désactiver : $env:BAB_NO_PULL = "1")
+if ((Test-Path ".git") -and (Get-Command git -ErrorAction SilentlyContinue) -and ($env:BAB_NO_PULL -ne "1")) {
+  Write-Host "0/3  Récupération de la dernière version (git pull)..."
+  & git pull --ff-only
+  if ($LASTEXITCODE -ne 0) { Write-Host "  (mise à jour impossible : on continue avec la version présente sur ce PC)" }
+}
 Set-Location (Join-Path $PSScriptRoot "deploy")
 $compose = @("compose", "-f", "docker-compose.local.yml")
 
@@ -21,8 +30,9 @@ if (-not $ready) { Write-Host "Le serveur ne démarre pas. Détails : docker com
 Write-Host "3/3  Chargement du restaurant de démonstration (la première fois : environ 1 minute)..."
 & docker @compose exec -T api python -m app.demo seed --admin-email gerant@bistrot.local --admin-password demo-bistrot-2026
 
+$version = & docker @compose exec -T api python -c "import app; print(app.__version__)"
 Write-Host ""
-Write-Host "Prêt : http://localhost:8080"
+Write-Host "Prêt : http://localhost:8080   (version $version, affichée aussi en bas du menu de gauche)"
 Write-Host "  Adresse e-mail : gerant@bistrot.local"
 Write-Host "  Mot de passe   : demo-bistrot-2026"
 Write-Host "Arrêter : cd deploy ; docker compose -f docker-compose.local.yml down   (vos données sont conservées)"

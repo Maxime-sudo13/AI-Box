@@ -1,7 +1,14 @@
 #!/bin/sh
 # Business AI Box — test sur votre ordinateur (Mac ou Linux). Prérequis : Docker Desktop.
 set -eu
-cd "$(dirname "$0")/deploy"
+cd "$(dirname "$0")"
+
+# Récupère la dernière version du code si le dossier vient de « git clone » (désactiver : BAB_NO_PULL=1).
+if [ -d .git ] && command -v git >/dev/null 2>&1 && [ "${BAB_NO_PULL:-}" != "1" ]; then
+  echo "0/3  Récupération de la dernière version (git pull)…"
+  git pull --ff-only || echo "  (mise à jour impossible : on continue avec la version présente sur ce poste)"
+fi
+cd deploy
 COMPOSE="docker compose -f docker-compose.local.yml"
 
 # Dossiers partagés avec le conteneur (utilisateur dédié, sans droits root).
@@ -20,8 +27,9 @@ done
 echo "3/3  Chargement du restaurant de démonstration (la première fois : environ 1 minute)…"
 $COMPOSE exec -T api python -m app.demo seed --admin-email gerant@bistrot.local --admin-password demo-bistrot-2026
 
+VERSION=$($COMPOSE exec -T api python -c "import app; print(app.__version__)")
 echo
-echo "Prêt : http://localhost:8080"
+echo "Prêt : http://localhost:8080   (version $VERSION, affichée aussi en bas du menu de gauche)"
 echo "  Adresse e-mail : gerant@bistrot.local"
 echo "  Mot de passe   : demo-bistrot-2026"
 echo "Arrêter : cd deploy && $COMPOSE down      (vos données sont conservées)"

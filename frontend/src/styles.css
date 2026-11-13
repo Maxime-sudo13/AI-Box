@@ -210,6 +210,9 @@ a {
   padding: 20px 14px;
   background: var(--surface);
   border-right: 1px solid var(--line);
+  /* En secours : si le contenu dépasse malgré tout, la barre entière défile. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .sidebar-top {
   display: flex;
@@ -262,6 +265,10 @@ a {
   gap: 6px;
   padding: 14px 6px 0;
   border-top: 1px solid var(--line);
+}
+.app-version {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 .who {
   display: flex;
@@ -767,6 +774,7 @@ tr.inactive td:not(.actions) {
   .nav { gap: 4px; overflow-y: visible; }
   .nav-section { flex-direction: row; gap: 4px; }
   .nav-title { display: none; }
+  .app-version { display: none; }
 }
 
 /* Écrans peu hauts (portable 13 pouces, fenêtre réduite) : barre latérale plus compacte. */

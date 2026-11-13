@@ -60,6 +60,7 @@ Pour tester le **dossier surveillé** : dans **Logiciels connectés**, connectez
 |---|---|
 | « IA locale indisponible » | Vérifiez qu'Ollama tourne (`ollama list`). Sous Linux, ou si cela persiste, démarrez Ollama avec la variable `OLLAMA_HOST=0.0.0.0` pour qu'il accepte les connexions de Docker. |
 | Le port 8080 est déjà utilisé | Dans `deploy/docker-compose.local.yml`, remplacez `127.0.0.1:8080:80` par `127.0.0.1:8090:80`, puis ouvrez http://localhost:8090. |
+| Une page ou un lien annoncé n'apparaît pas | Regardez la version écrite en bas du menu de gauche. Si elle est ancienne (ou absente), relancez le script : il récupère la dernière version (`git pull`) et reconstruit l'application. Puis rechargez la page avec Ctrl+F5. |
 | Le script s'arrête à « Attente du serveur » | `docker compose -f deploy/docker-compose.local.yml logs api` affiche la cause. |
 | Repartir de zéro | `docker compose -f deploy/docker-compose.local.yml down -v` (efface aussi les données de test). |
 
