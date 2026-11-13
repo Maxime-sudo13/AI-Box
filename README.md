@@ -7,6 +7,7 @@ logiciels dans les limites fixées par le dirigeant.
 - **Cahier des charges** : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - **Exploitation** (installation, sauvegardes, mises à jour, dimensionnement) : [docs/industrialisation.md](docs/industrialisation.md)
 - **RGPD** : [docs/rgpd.md](docs/rgpd.md) · **Pilote** : [docs/pilote.md](docs/pilote.md)
+- **Ce qu'il reste à faire et améliorations** : [docs/reste-a-faire.md](docs/reste-a-faire.md)
 - **Feuille de route et suivi** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 
 ## Tester sur votre ordinateur
