@@ -5,6 +5,8 @@ qui centralise ses données, les analyse localement avec une IA embarquée et ag
 logiciels dans les limites fixées par le dirigeant.
 
 - **Cahier des charges** : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
+- **Exploitation** (installation, sauvegardes, mises à jour, dimensionnement) : [docs/industrialisation.md](docs/industrialisation.md)
+- **RGPD** : [docs/rgpd.md](docs/rgpd.md) · **Pilote** : [docs/pilote.md](docs/pilote.md)
 - **Feuille de route et suivi** : [docs/feuille-de-route.md](docs/feuille-de-route.md)
 
 ## Tester sur votre ordinateur
@@ -18,7 +20,7 @@ démonstration sur **http://localhost:8080** (identifiants : `gerant@bistrot.loc
 
 Guide détaillé, IA locale et dépannage : [docs/test-local.md](docs/test-local.md).
 
-## État actuel — v0.5.0 (Phase 5 : connecteurs)
+## État actuel — v0.6.0 (Phase 6 : industrialisation, prêt pour le matériel)
 
 ![Tableau de bord du restaurant de démonstration](docs/captures/1-tableau-de-bord.png)
 
@@ -35,7 +37,10 @@ Guide détaillé, IA locale et dépannage : [docs/test-local.md](docs/test-local
 | Journal complet des actions, annulation des actions réversibles, boîte d'envoi | ✅ Phase 4 |
 | **Connecteurs** : dossier surveillé, boîte mail (IMAP), Qonto ; permissions fines, identifiants chiffrés | ✅ Phase 5 |
 | **Mode « zéro communication externe »** : aucun connecteur en ligne, aucun envoi | ✅ Phase 5 |
-| Industrialisation : mini-PC, mises à jour signées, sauvegardes, pilote | Phase 6 |
+| **Sauvegardes chiffrées** quotidiennes sur support distinct, restauration testée | ✅ Phase 6 |
+| **Mises à jour signées**, vérifiées hors ligne, retour arrière automatique | ✅ Phase 6 |
+| **Installation du boîtier** (disque chiffré, pare-feu, démarrage auto), **accès distant WireGuard**, page Système | ✅ Phase 6 — à dérouler sur le premier mini-PC |
+| Pilote chez une entreprise réelle | Liste de contrôle prête : [docs/pilote.md](docs/pilote.md) |
 
 Restaurant de démonstration complet : voir [docs/demo.md](docs/demo.md).
 

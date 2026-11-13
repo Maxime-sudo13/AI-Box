@@ -32,6 +32,7 @@ services:
       BAB_OLLAMA_URL: ${BAB_OLLAMA_URL:-http://host.docker.internal:11434}
       BAB_AI_MODEL: ${BAB_AI_MODEL:-qwen2.5:7b}
       BAB_IMPORT_ROOT: /depot
+      BAB_BACKUP_DIR: /sauvegardes
       BAB_OFFLINE_MODE: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -39,6 +40,8 @@ services:
       - documents:/data
       # Déposez des factures dans deploy/depot/ pour tester le « Dossier surveillé ».
       - ./depot:/depot
+      # Support de sauvegarde distinct (disque USB, NAS) : sauvegardes chiffrées quotidiennes.
+      - ./sauvegardes:/sauvegardes
     depends_on:
       db:
         condition: service_healthy

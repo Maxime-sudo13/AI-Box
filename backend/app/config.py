@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     secret_key: str | None = None
     # Racine autorisée pour les dossiers surveillés : un connecteur ne lit rien en dehors.
     import_root: str | None = None
+    # Sauvegardes : dossier sur un support distinct (disque USB, NAS). Vide : sous-dossier du
+    # dossier de données, signalé comme insuffisant dans la page Système.
+    backup_dir: str | None = None
+    backup_keep: int = 14
+    backup_hour: int = 2  # heure de la sauvegarde quotidienne (UTC)
+
     # Planificateur des synchronisations (désactivé dans les tests).
     scheduler_enabled: bool = True
 

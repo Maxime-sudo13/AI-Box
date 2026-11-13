@@ -13,6 +13,7 @@ import { DocumentReview } from "./pages/DocumentReview";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Setup } from "./pages/Setup";
+import { System } from "./pages/System";
 import { Treasury } from "./pages/Treasury";
 import { Users } from "./pages/Users";
 import { useSession } from "./session";
@@ -62,6 +63,7 @@ export function App() {
           <>
             <Route path="parametres/utilisateurs" element={<Users />} />
             <Route path="parametres/journal" element={<Audit />} />
+            <Route path="parametres/systeme" element={<System />} />
           </>
         )}
         <Route path="*" element={<Navigate to="/" replace />} />

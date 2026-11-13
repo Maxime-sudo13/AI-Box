@@ -19,6 +19,8 @@ services:
     networks: [internal]
 
   api:
+    # Image versionnée : construite sur place, ou chargée depuis un paquet de mise à jour signé.
+    image: business-ai-box-api:${BAB_VERSION:-dev}
     build: ../backend
     restart: unless-stopped
     environment:
@@ -34,6 +36,7 @@ services:
       # Mode « zéro communication externe » : aucun connecteur en ligne, aucun envoi SMTP.
       BAB_OFFLINE_MODE: ${BAB_OFFLINE_MODE:-true}
       BAB_IMPORT_ROOT: /depot
+      BAB_BACKUP_DIR: /sauvegardes
       # Clé de chiffrement des identifiants des connecteurs (sinon générée dans /data).
       BAB_SECRET_KEY: ${BAB_SECRET_KEY:-}
     volumes:
@@ -41,6 +44,8 @@ services:
       - documents:/data
       # Dossiers surveillés (scanner, partage réseau) : seul endroit lisible par les connecteurs.
       - ${BAB_DEPOT_DIR:-./depot}:/depot
+      # Support de sauvegarde distinct (disque USB, NAS) : sauvegardes chiffrées quotidiennes.
+      - ${BAB_BACKUP_MEDIUM:-/mnt/sauvegarde}:/sauvegardes
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +66,7 @@ services:
     #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
 
   web:
+    image: business-ai-box-web:${BAB_VERSION:-dev}
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web

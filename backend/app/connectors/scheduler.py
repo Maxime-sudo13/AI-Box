@@ -46,7 +46,20 @@ def start() -> None:
     if _scheduler is None and get_settings().scheduler_enabled:
         _scheduler = BackgroundScheduler(timezone="UTC")
         _scheduler.add_job(tick, "interval", minutes=1, id="connectors", max_instances=1, coalesce=True)
+        from app.ops.backup import scheduled_backup
+
+        _scheduler.add_job(scheduled_backup, "cron", hour=get_settings().backup_hour, minute=30, id="backup",
+                           max_instances=1, coalesce=True)  # fmt: skip
         _scheduler.start()
+
+
+def running() -> bool:
+    return _scheduler is not None and _scheduler.running
+
+
+def next_backup():
+    job = _scheduler.get_job("backup") if _scheduler else None
+    return job.next_run_time if job else None
 
 
 def stop() -> None:

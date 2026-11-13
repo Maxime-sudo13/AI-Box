@@ -12,13 +12,13 @@ sections 15 (MVP) et 17 (plan de développement).
 | 3. IA | Ollama + Qwen, conseiller conversationnel, recommandations justifiées | ✅ Terminée (v0.4.0) |
 | 4. Exécution | Moteur d'actions, niveaux 1/2/3, validations, journal des actions | ✅ Terminée (v0.4.0) |
 | 5. Connecteurs | Socle de connecteurs, première intégration comptable/bancaire | ✅ Terminée (v0.5.0) |
-| 6. Industrialisation | Mini-PC, durcissement, mises à jour signées, sauvegardes, pilote | ⏭️ Prochaine |
+| 6. Industrialisation | Mini-PC, durcissement, mises à jour signées, sauvegardes, pilote | 🟡 Logiciel prêt (v0.6.0) ; reste le matériel et le pilote |
 
 ## Avancement du MVP (cahier des charges, §15)
 
 | # | Exigence | État |
 |---|---|---|
-| 1 | Installation du logiciel sur un ordinateur Linux | 🟡 Docker Compose prêt, à éprouver sur machine réelle |
+| 1 | Installation du logiciel sur un ordinateur Linux | ✅ Docker exécuté et vérifié ; script d'installation du boîtier prêt |
 | 2 | Interface professionnelle avec authentification | ✅ |
 | 3 | Gestion des entreprises et utilisateurs | ✅ |
 | 4 | Importation de factures PDF | ✅ PDF, scans et photos, par lots |
@@ -35,6 +35,50 @@ sections 15 (MVP) et 17 (plan de développement).
 | 15 | Premier système d'exécution d'actions contrôlées | ✅ Courriels (SMTP ou boîte d'envoi), tâches, reclassement, ordre de virement SEPA |
 
 ## Journal
+
+### 13 novembre 2026 — v0.6.0, Phase 6 (partie logicielle)
+
+Livré :
+- **Sauvegardes chiffrées.**
+  - Chiffrement asymétrique : le boîtier crée les sauvegardes sans pouvoir les relire ; seule
+    la clé de récupération du dirigeant le permet.
+  - Contenu : la base, les documents et la clé des connecteurs.
+  - Sauvegarde quotidienne, conservation des 14 dernières, avertissement si le support n'est
+    pas distinct.
+  - Vérification complète depuis l'interface, copie hors site téléchargeable.
+- **Restauration** en ligne de commande. Le cycle complet est testé automatiquement : un
+  sinistre (compte ajouté, entreprise créée, documents effacés) est effacé par la
+  restauration. Critère du MVP « une sauvegarde peut être restaurée » : ✅.
+- **Mises à jour signées.**
+  - Paquet `.babmaj` signé Ed25519 par l'éditeur, empreinte de chaque fichier vérifiée.
+  - Retour à une version antérieure refusé, sauvegarde avant installation.
+  - Retour automatique à la version précédente si le boîtier ne redémarre pas.
+  - Script de construction côté éditeur.
+- **Installation du boîtier** (`installer-boitier.sh`) :
+  - vérification du chiffrement du disque ;
+  - Docker, pare-feu limité au réseau local, mises à jour de sécurité automatiques,
+    `businessaibox.local` ;
+  - secrets générés, service au démarrage.
+- **Accès distant WireGuard** (`acces-distant.sh`) : un appareil = une clé, QR code,
+  révocation.
+- **Page Système** : version, IA, disque, base, sauvegardes, tâches planifiées, alertes
+  d'exploitation.
+- **Test de charge** : 20 utilisateurs simultanés sans erreur, écrans sous 1 seconde
+  (moteur seul).
+- Documentation : [industrialisation.md](industrialisation.md), [rgpd.md](rgpd.md),
+  [pilote.md](pilote.md).
+
+Vérifié : 113 tests automatisés, dont 7 pour l'exploitation (chiffrement, falsification, clé
+erronée, troncature, restauration complète, rétention, paquets trafiqués ou étrangers ou
+anciens). Sauvegarde et vérification exécutées dans l'installation Docker. Scripts vérifiés
+par shellcheck.
+
+Reste à faire, avec le matériel :
+- dérouler `installer-boitier.sh` sur le premier mini-PC, monter le disque USB de sauvegarde ;
+- restaurer une sauvegarde sur une seconde machine ;
+- appliquer un vrai paquet de mise à jour de bout en bout ;
+- mesurer le temps de réponse de Qwen sur le matériel retenu ;
+- puis le pilote ([pilote.md](pilote.md)).
 
 ### 12 novembre 2026 — test local sans boîtier
 

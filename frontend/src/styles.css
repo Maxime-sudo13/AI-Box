@@ -1205,3 +1205,8 @@ tr.row-highlight td { background: var(--accent-soft); }
 .connector-top { display: flex; gap: 10px; align-items: center; }
 @media (prefers-color-scheme: dark) { .perm.write { background: #3a2418; color: #f2b391; } }
 @media (max-width: 900px) { .conn { grid-template-columns: minmax(0, 1fr); } .conn-actions { justify-content: flex-start; } }
+
+/* Système */
+.tile-warn { border-color: var(--critical); }
+.recovery-key { font-size: 1.05rem; padding: 14px; text-align: center; border: 2px dashed var(--accent); border-radius: 8px; letter-spacing: 0.04em; user-select: all; }
+details pre { margin: 8px 0 0; padding: 10px; background: var(--surface-2); border-radius: 6px; overflow-x: auto; }

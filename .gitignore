@@ -20,3 +20,4 @@ demo-restaurant/
 # Dépôts de test locaux (dossier surveillé)
 deploy/depot/*
 !deploy/depot/.gitkeep
+deploy/sauvegardes/

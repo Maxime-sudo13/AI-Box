@@ -58,6 +58,7 @@ export function Shell() {
           ? [
               { to: "/parametres/utilisateurs", label: "Utilisateurs" },
               { to: "/parametres/journal", label: "Journal d'activité" },
+              { to: "/parametres/systeme", label: "Système" },
             ]
           : []),
         { to: "/parametres/compte", label: "Mon compte" },

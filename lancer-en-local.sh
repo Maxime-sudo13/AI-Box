@@ -4,6 +4,9 @@ set -eu
 cd "$(dirname "$0")/deploy"
 COMPOSE="docker compose -f docker-compose.local.yml"
 
+# Dossiers partagés avec le conteneur (utilisateur dédié, sans droits root).
+mkdir -p depot sauvegardes && chmod 777 depot sauvegardes
+
 echo "1/3  Construction et démarrage (la première fois : 5 à 10 minutes)…"
 if [ "${BAB_NO_BUILD:-}" = "1" ]; then $COMPOSE up -d --no-build; else $COMPOSE up -d --build; fi
 
