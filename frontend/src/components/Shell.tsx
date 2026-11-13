@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { agentsApi } from "../agents";
 import { financeApi } from "../finance";
@@ -10,6 +10,7 @@ export function Shell() {
   const [alertCount, setAlertCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
   const companyId = company?.id;
   const financeOn = hasModule("finance");
 
@@ -29,6 +30,12 @@ export function Shell() {
       cancelled = true;
     };
   }, [companyId, financeOn, location.key]);
+
+  // Le lien de la page affichée reste visible dans la liste, même quand elle défile
+  // (écran peu haut, ou barre horizontale sur smartphone).
+  useEffect(() => {
+    navRef.current?.querySelector("a.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [location.pathname]);
 
   if (!user) return null;
 
@@ -86,7 +93,7 @@ export function Shell() {
             company && <p className="company-name">{company.name}</p>
           )}
         </div>
-        <nav className="nav" aria-label="Navigation principale">
+        <nav ref={navRef} className="nav" aria-label="Navigation principale">
           {sections.map((section) => (
             <div key={section.title} className="nav-section">
               <span className="nav-title">{section.title}</span>

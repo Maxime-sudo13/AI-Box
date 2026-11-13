@@ -225,7 +225,16 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  /* La liste défile dans la barre latérale : tous les liens restent accessibles,
+     même sur un écran peu haut, et le bloc du compte reste visible en bas. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-inline: -6px;
+  padding-inline: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 .nav a {
   padding: 8px 10px;
@@ -663,6 +672,7 @@ tr.inactive td:not(.actions) {
   .nav a {
     white-space: nowrap;
   }
+
   .sidebar-bottom {
     flex-direction: row;
     align-items: center;
@@ -750,6 +760,23 @@ tr.inactive td:not(.actions) {
 .nav-badge {
   min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--critical);
   color: #fff; font-size: 0.75rem; font-weight: 650; text-align: center; line-height: 20px;
+}
+
+/* Smartphone et tablette : une seule ligne de liens qui défile horizontalement. */
+@media (max-width: 800px) {
+  .nav { gap: 4px; overflow-y: visible; }
+  .nav-section { flex-direction: row; gap: 4px; }
+  .nav-title { display: none; }
+}
+
+/* Écrans peu hauts (portable 13 pouces, fenêtre réduite) : barre latérale plus compacte. */
+@media (min-width: 801px) and (max-height: 820px) {
+  .sidebar { gap: 14px; padding: 14px 12px; }
+  .sidebar-top { gap: 10px; }
+  .nav { gap: 8px; }
+  .nav a { padding: 5px 10px; font-size: 0.92rem; }
+  .nav-title { padding-bottom: 2px; }
+  .sidebar-bottom { gap: 4px; padding-top: 10px; }
 }
 
 /* Sélecteur de mois */
@@ -1076,9 +1103,6 @@ input.num { text-align: right; font-variant-numeric: tabular-nums; }
   .upload-list li { grid-template-columns: 10px minmax(0, 1fr); }
   .up-msg { grid-column: 2; }
   .month-select select { min-width: 0; }
-  .nav-section { flex-direction: row; gap: 4px; }
-  .nav-title { display: none; }
-  .nav { flex-direction: row; }
 }
 
 /* ===================================================================================
