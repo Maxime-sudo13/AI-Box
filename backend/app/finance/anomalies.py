@@ -482,7 +482,7 @@ def food_cost_drift(ds: Dataset, months: dict[date, Month]) -> list[dict[str, An
             "food_cost_drift",
             last.isoformat()[:7],
             "high" if drift >= 3 else "medium",
-            f"Coût matière en hausse : {pct(now)} en {month_label(last)}",
+            f"Coût matière en hausse : {pct(now)} du CA nourriture en {month_label(last)}, contre {pct(ref)}",
             f"Les achats alimentaires représentent {pct(now)} du chiffre d'affaires nourriture, contre {pct(ref)} "
             "en moyenne sur les trois mois précédents.",
             details=[

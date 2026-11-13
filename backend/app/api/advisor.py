@@ -29,6 +29,7 @@ EXAMPLES = [
     "Si je recrute une personne supplémentaire à 2 500 € par mois, quel sera l'impact ?",
     "Quels sont mes cinq problèmes prioritaires ?",
     "Qui sont mes meilleurs clients ?",
+    "Quel chiffre d'affaires prévois-tu pour l'année complète ?",
     "Prépare un plan d'optimisation pour les 90 prochains jours.",
 ]
 

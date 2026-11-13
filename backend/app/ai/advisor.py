@@ -74,6 +74,12 @@ INTENTS: list[tuple[str, str, tuple[str, ...]]] = [
         r"perd|pertes?|gaspill|ou va (l'?argent|mon argent)|fuite|depenses?.*(anormal|augment|trop)|augment.*anormal",
         ("losses", "top_charges"),
     ),
+    (
+        "forecast",
+        r"previsionnel|previsions?(?! de tresorerie)|prevoi|projection|annee prochaine|l'an prochain"
+        r"|annee (complete|entiere)|fin (de l'|d')annee|finir l'annee|terminer l'annee|sur l'annee",
+        ("forecast",),
+    ),
     ("compare", r"compar|evolution|tendance|derniers mois", ("compare_months",)),
     (
         "month",
@@ -82,12 +88,17 @@ INTENTS: list[tuple[str, str, tuple[str, ...]]] = [
     ),
     ("plan", r"\bplan\b|90 jours|feuille de route|que (dois|devrais|faire)|quoi faire", ("plan_90",)),
     ("priorities", r"priorit|problemes?|alertes?|risques?|urgent", ("priorities",)),
-    ("treasury", r"tresorerie|solde|liquidit|cash|banque", ("treasury",)),
+    ("treasury", r"tresorerie|solde|liquidit|cash|banque|dans le rouge|decouvert", ("treasury",)),
+    (
+        "absence",
+        r"vacances|conges|m'absenter|fermer (le|mon|l')|fermeture annuelle|partir \w+ semaines?",
+        ("treasury", "investment_capacity"),
+    ),
     (
         "customers",
         r"meilleurs?.{0,12}clients?|(principaux|plus gros|gros|plus importants?|premiers?|top|classement).{0,12}clients?"
         r"|\bclients?\b.{0,30}(meilleur|principa|important|fidele|classement|inactif|perdu|rapporte|depense)"
-        r"|qui (sont|est) mes clients|\bmes clients\b",
+        r"|qui (sont|est) mes clients|\bmes clients\b|(societe|entreprise|boite)s? (qui )?(me )?(command|fait le plus)",
         ("customers",),
     ),
     (
@@ -96,7 +107,12 @@ INTENTS: list[tuple[str, str, tuple[str, ...]]] = [
         ("receivables",),
     ),
     ("subscriptions", r"abonnement|contrat|resili", ("subscriptions",)),
-    ("suppliers", r"fournisseur|achats?|prix d'?achat|hausse de prix", ("suppliers",)),
+    (
+        "suppliers",
+        r"fournisseur|achats?|prix d'?achat|hausse de prix|grossiste|boucher|poissonnier|primeur|maraicher"
+        r"|arnaqu|(factur|vend)\w* (trop|plus) cher",
+        ("suppliers",),
+    ),
     ("documents", r"documents?|justificatif|factures? (a verifier|manquante)|doublon", ("documents_status",)),
     ("sales", r"ventes?|chiffre d'?affaires|couverts|ticket|frequentation|clientele", ("sales",)),
     ("costs", r"cout matiere|food cost|marge brute|charges?|depenses?", ("month_summary", "top_charges")),
@@ -108,6 +124,7 @@ Tu reformules une analyse déjà calculée, en français clair, chaleureux et pr
 Règles impératives :
 - N'utilise QUE les faits fournis. N'invente aucun chiffre, aucun pourcentage, aucune date.
 - Recopie chaque chiffre exactement comme il est écrit dans les faits, suivi de sa référence, par exemple « 52 477 € [F1] ».
+- Ne présente jamais un chiffre réalisé (passé) comme une prévision, ni une prévision comme un résultat acquis.
 - Garde le sens exact de chaque chiffre : une part du chiffre d'affaires (« représente 31 % ») n'est pas une hausse ;
   n'écris « hausse », « baisse » ou « augmente de » que si le libellé du fait est une évolution ou un écart.
 - Distingue les estimations et hypothèses des données vérifiées quand c'est le cas.
@@ -205,6 +222,9 @@ def verify_numbers(candidate: str, allowed_text: str, facts: list[dict[str, Any]
 
 
 _DIRECTION = re.compile(r"(augment|hausse|baiss|diminu|progress|recul|chut|grimp)\w*\s+(de\s+)?$")
+_DIRECTION_PCT = re.compile(
+    r"(augment|hausse|baiss|diminu|progress|recul|chut|grimp)\w*\s+(de\s+|d'environ\s+)?(\d+(?:[.,]\d+)?)\s*%"
+)
 _CHANGE_LABEL = re.compile(r"volution|variation|cart|hausse|baisse|d.rive|par rapport|vs", re.I)
 
 
@@ -224,6 +244,15 @@ def verify_meaning(candidate: str, facts: list[dict[str, Any]]) -> list[str]:
         before = before[: before.rfind(f["display"])] if f["display"] in before else before
         if _DIRECTION.search(before.rstrip().lower() + " "):
             wrong.append(f"{f['id']} : {f['label']}")
+    # Même contrôle pour un pourcentage écrit sans référence : « une augmentation de 31,0 % ».
+    pcts = [f for f in facts if f["unit"] == "pct" and isinstance(f["value"], (int, float))]
+    for m in _DIRECTION_PCT.finditer(candidate.lower()):
+        value = to_decimal(m.group(3))
+        if value is None:
+            continue
+        same = [f for f in pcts if abs(abs(Decimal(str(f["value"]))) - value) < Decimal("0.051")]
+        if same and not any(_CHANGE_LABEL.search(f["label"]) for f in same):
+            wrong.extend(f"{f['id']} : {f['label']}" for f in same if f"{f['id']} : {f['label']}" not in wrong)
     return wrong
 
 
@@ -266,9 +295,10 @@ def answer(
         composer.section(
             "Hors de mon périmètre",
             [
-                "Cette question ne porte pas sur les données de votre entreprise que je peux analyser (ventes, "
-                "achats, banque, documents). Vous pouvez me demander par exemple : « Qui sont mes meilleurs "
-                "clients ? », « Où est-ce que je perds de l'argent ? », « Quelle est ma trésorerie ? »."
+                "Je n'ai pas trouvé de lien entre cette question et les données de votre entreprise que je peux "
+                "analyser (ventes, achats, banque, documents). Si elle porte sur votre entreprise, reformulez-la, "
+                "par exemple : « Qui sont mes meilleurs clients ? », « Où est-ce que je perds de l'argent ? », "
+                "« Quelle est ma trésorerie ? »."
             ],
         )
     elif intents == ["general"]:

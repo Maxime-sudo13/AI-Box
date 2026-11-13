@@ -63,7 +63,7 @@ def test_status_lists_agents(bistrot):
 @pytest.mark.parametrize(
     "question,intent,expected",
     [
-        ("Fais-moi un bilan complet de mon entreprise.", "bilan", "Sur 12 mois"),
+        ("Fais-moi un bilan complet de mon entreprise.", "bilan", "Réalisé sur les 12 derniers mois"),
         ("Où est-ce que je perds le plus d'argent ?", "losses", "Coût matière en hausse"),
         ("Combien puis-je réellement investir actuellement ?", "invest", "seuil de vigilance"),
         ("Si je recrute une personne supplémentaire à 2 500 € par mois ?", "hiring", "2 500 €"),
@@ -208,12 +208,12 @@ def test_model_routes_unrecognised_question(bistrot):
         "Rédaction impossible à valider : 123 456 €.", route='{"outils": ["treasury", "investment_capacity"]}'
     )
     set_llm(fake)
-    reply = ask(bistrot, "Est-ce que je peux partir trois semaines en vacances cet été sans stress ?")["messages"][-1]
+    reply = ask(bistrot, "Puis-je me verser une prime à la fin du trimestre ?")["messages"][-1]
     g = reply["generation"]
     assert g["routing"] == "model" and g["intents"] == ["ia:treasury", "ia:investment_capacity"]
     assert "Trésorerie" in reply["content"] and "pas reconnu" not in reply["content"]
     # Le modèle ne reçoit que la question et la liste des outils, aucune donnée.
-    assert fake.routed == ["Question : Est-ce que je peux partir trois semaines en vacances cet été sans stress ?"]
+    assert fake.routed == ["Question : Puis-je me verser une prime à la fin du trimestre ?"]
 
 
 def test_keyword_questions_do_not_call_the_router(bistrot):
@@ -237,7 +237,7 @@ def test_model_says_out_of_scope(bistrot):
 def test_unusable_model_choice_falls_back_to_keywords(bistrot, route):
     # Rédaction volontairement invalide : on lit le texte du moteur.
     set_llm(FakeLLM("Invention : 123 456 €.", route=route))
-    reply = ask(bistrot, "Est-ce que je peux partir en vacances ?")["messages"][-1]
+    reply = ask(bistrot, "Puis-je me verser une prime ?")["messages"][-1]
     assert reply["generation"]["intents"] == ["general"] and "pas reconnu" in reply["content"]
 
 
@@ -253,3 +253,32 @@ def test_parse_choice_filters_unknown_tools():
     ]
     assert parse_choice('{"outils": []}') == []
     assert parse_choice("{pas du json}") is None
+
+
+def test_forecast_full_year_and_next_year(bistrot):
+    reply = ask(bistrot, "quel est le ca previsionnel que tu prevois pour l'année complete?")["messages"][-1]
+    assert reply["generation"]["intents"] == ["forecast"]
+    content = reply["content"]
+    assert "complète" in content and "sans rien changer" in content and "avec ces améliorations" in content
+    facts = {f["label"]: f for f in reply["facts"]}
+    # Les prévisions sont des hypothèses, jamais présentées comme des données vérifiées.
+    forecasts = [f for label, f in facts.items() if label.startswith("Prévision")]
+    assert forecasts and all(f["quality"] == "hypothesis" for f in forecasts)
+    base = next(f["value"] for label, f in facts.items() if "sans changement" in label and "marge" not in label)
+    better = next(
+        f["value"] for label, f in facts.items() if "avec les améliorations" in label and "marge" not in label
+    )
+    gain = next(f["value"] for label, f in facts.items() if label.startswith("Gain d’EBE"))
+    assert abs(better - base - gain) < 1
+
+
+def test_llm_uncited_percentage_misread_is_rejected(bistrot):
+    def misread(prompt):
+        facts = prompt.split("Faits calculés (seule source autorisée) :\n", 1)[1]
+        line = next(line for line in facts.splitlines() if " %" in line and "Marge" in line)
+        value = line.split("] ", 1)[1].split(" : ", 1)[1].split(" (", 1)[0]
+        return f"La rentabilité est bonne, malgré une baisse de {value} ce mois-ci."
+
+    set_llm(FakeLLM(misread))
+    reply = ask(bistrot, "Comment s'est passé le mois de juin ?")["messages"][-1]
+    assert reply["generation"]["guard"] == "rejected" and reply["generation"]["misread"]

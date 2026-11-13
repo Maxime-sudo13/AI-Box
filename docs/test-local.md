@@ -64,8 +64,13 @@ sous la réponse). Pour mesurer si votre modèle choisit bien, depuis le dossier
 docker compose -f deploy/docker-compose.local.yml exec api python scripts/banc_routage.py
 ```
 
-Le script pose 22 questions inhabituelles (dont 3 hors sujet ou malveillantes) et affiche le
-taux de bons choix et le temps moyen. Envoyez-moi le résultat : il sert à choisir le modèle et
+Le script pose 32 questions inhabituelles (dont 4 hors sujet ou malveillantes) et affiche
+deux taux de bons choix : le modèle seul, et le système complet (mots-clés d'abord, modèle
+sinon), ainsi que le temps moyen.
+
+Premier essai (13 novembre 2026, PC de développement, Qwen 2.5 7B) : 18/22 bons choix,
+0,3 s par question. Les erreurs : 3 questions sur l'entreprise jugées « hors sujet » ; la
+consigne du modèle a été corrigée en conséquence (v0.6.4). Envoyez-moi le résultat : il sert à choisir le modèle et
 le matériel. Seules la question et la liste des analyses sont envoyées au modèle, jamais vos
 données.
 

@@ -36,6 +36,7 @@ AGENTS: dict[str, Agent] = {
                 "profit_change",
                 "compare_months",
                 "year_summary",
+                "forecast",
                 "treasury",
                 "investment_capacity",
                 "top_charges",

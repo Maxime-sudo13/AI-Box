@@ -169,14 +169,127 @@ def year_summary(c: Composer, ctx: Context, **_: Any) -> None:
     worst = min(keys, key=lambda k: ctx.m(k).ebe)
     period = f"{month_label(keys[0])} à {month_label(keys[-1])}"
     c.section(
-        f"Sur 12 mois ({period})",
+        f"Réalisé sur les 12 derniers mois ({period})",
         [
-            f"Chiffre d'affaires HT cumulé : {c.fact('rev12', 'Chiffre d’affaires HT sur 12 mois', revenue)}.",
-            f"EBE cumulé : {c.fact('ebe12', 'EBE estimé sur 12 mois', ebe)}, soit {c.fact('ebe12pct', 'Marge d’EBE sur 12 mois', _ratio(ebe, revenue), 'pct')} du chiffre d'affaires.",
+            f"Chiffre d'affaires HT réalisé : {c.fact('rev12', 'Chiffre d’affaires HT réalisé sur les 12 derniers mois', revenue)}.",
+            f"EBE réalisé : {c.fact('ebe12', 'EBE estimé sur 12 mois', ebe)}, soit {c.fact('ebe12pct', 'Marge d’EBE sur 12 mois', _ratio(ebe, revenue), 'pct')} du chiffre d'affaires.",
             f"Meilleur mois : {month_label(best)} ({c.fact(f'ebe:{best}', f'EBE estimé {month_label(best)}', ctx.m(best).ebe)}) ; "
             f"mois le plus faible : {month_label(worst)} ({c.fact(f'ebe:{worst}', f'EBE estimé {month_label(worst)}', ctx.m(worst).ebe)}).",
         ],
     )
+
+
+def _levers(ctx: Context) -> list[tuple[dict[str, Any], Decimal]]:
+    """Gains annuels chiffrés par les alertes ouvertes, sans double comptage."""
+    levers = [
+        a
+        for a in ctx.open_alerts
+        if a["impact"] and a["kind"] in ("food_cost_drift", "price_increase", "redundant_subscription")
+    ]
+    drift = any(a["kind"] == "food_cost_drift" for a in levers)
+    return [
+        (a, D(str(a["impact"]["amount"])))
+        for a in sorted(levers, key=lambda a: -(a["impact"]["amount"] or 0))
+        if not (drift and a["kind"] == "price_increase")  # déjà compris dans la dérive du coût matière
+    ]
+
+
+def forecast(c: Composer, ctx: Context, **_: Any) -> None:
+    """Prévision de l'année civile en cours et de l'année suivante, sans puis avec les améliorations.
+
+    Méthode volontairement simple et explicable : chaque mois à venir reprend le même mois de
+    l'année précédente, corrigé de la tendance récente quand l'historique le permet (6 derniers
+    mois comparés aux mêmes mois un an plus tôt, bornée à ±15 %). L'EBE varie avec le chiffre
+    d'affaires, diminué du coût des matières.
+    """
+    keys = ctx.complete
+    if len(keys) < 12:
+        c.section(
+            "Prévision annuelle",
+            [f"Il faut au moins 12 mois complets pour prévoir une année (saisonnalité) ; {len(keys)} disponible(s)."],
+        )
+        return
+    last12 = keys[-12:]
+    rev12 = sum((ctx.m(k).revenue for k in last12), ZERO)
+    ebe12 = sum((ctx.m(k).ebe for k in last12), ZERO)
+    mat12 = sum((ctx.m(k).group_total("matieres") for k in last12), ZERO)
+    margin = 1 - mat12 / rev12 if rev12 else D(1)  # part de chaque euro de CA qui reste après les matières
+
+    growth = ZERO
+    recent, before = keys[-6:], [add_months(k, -12) for k in keys[-6:]]
+    prev_rev = sum((ctx.m(k).revenue for k in before), ZERO)
+    has_trend = all(k in ctx.months and ctx.m(k).revenue for k in before) and prev_rev
+    if has_trend:
+        growth = max(D("-0.15"), min(D("0.15"), sum((ctx.m(k).revenue for k in recent), ZERO) / prev_rev - 1))
+    hyp = (
+        f"tendance des 6 derniers mois : {c.fact('fc_growth', 'Évolution du CA des 6 derniers mois par rapport aux mêmes mois un an plus tôt', growth * 100, 'pct', quality='estimated', source='journal de caisse et factures')}"
+        if has_trend
+        else "activité identique à celle des 12 derniers mois (moins de 18 mois d'historique : pas encore de tendance mesurable)"
+    )
+
+    def project(month: date) -> tuple[Decimal, Decimal] | None:
+        """(CA, EBE) prévus pour un mois, d'après le même mois de l'année précédente."""
+        ref = add_months(month, -12)
+        if ref not in ctx.months or not ctx.m(ref).revenue:
+            return None
+        rev = ctx.m(ref).revenue * (1 + growth)
+        return rev, ctx.m(ref).ebe + (rev - ctx.m(ref).revenue) * margin
+
+    lines = [f"Méthode : chaque mois à venir reprend le même mois de l'an passé ; {hyp}."]
+
+    # Année civile en cours : mois réalisés + mois restants estimés.
+    year = keys[-1].year
+    done = [k for k in keys if k.year == year]
+    todo = [date(year, m, 1) for m in range(1, 13) if date(year, m, 1) not in done]
+    projected = [project(m) for m in todo]
+    if done and all(projected):
+        cal_rev = sum((ctx.m(k).revenue for k in done), ZERO) + sum((p[0] for p in projected if p), ZERO)
+        cal_ebe = sum((ctx.m(k).ebe for k in done), ZERO) + sum((p[1] for p in projected if p), ZERO)
+        detail = (
+            f" ({len(done)} mois réalisés, {len(todo)} estimé(s) d'après les mêmes mois de {year - 1})" if todo else ""
+        )
+        lines.append(
+            f"Année {year} complète{detail} : chiffre d'affaires HT prévu "
+            f"{c.fact('fc_cal_rev', f'Prévision du chiffre d’affaires HT {year}', cal_rev, quality='hypothesis', source='mois réalisés + mois restants estimés')}, "
+            f"EBE prévu {c.fact('fc_cal_ebe', f'Prévision de l’EBE {year}', cal_ebe, quality='hypothesis', source='mois réalisés + mois restants estimés')}."
+        )
+
+    # Année suivante : sans rien changer, puis avec les améliorations détectées.
+    nxt = year + 1
+    base_rev = rev12 * (1 + growth)
+    base_ebe = ebe12 + (base_rev - rev12) * margin
+    lines.append(
+        f"Année {nxt}, sans rien changer : chiffre d'affaires HT "
+        f"{c.fact('fc_next_rev', f'Prévision du chiffre d’affaires HT {nxt}', base_rev, quality='hypothesis', source='12 derniers mois × tendance')}, "
+        f"EBE {c.fact('fc_next_ebe', f'Prévision de l’EBE {nxt} sans changement', base_ebe, quality='hypothesis', source='EBE 12 mois + variation du CA × part restant après matières')} "
+        f"(marge de {c.fact('fc_next_pct', f'Prévision de la marge d’EBE {nxt} sans changement', _ratio(base_ebe, base_rev), 'pct', quality='hypothesis')})."
+    )
+    levers = _levers(ctx)
+    gains = sum((amount for _, amount in levers), ZERO)
+    if levers:
+        names = " ; ".join(
+            f"{a['title']} ({c.fact(f'alert:{a["fingerprint"]}', a['impact']['label'].capitalize() + ' — ' + a['title'], amount, quality='estimated', source=a['impact']['formula'], link='/alertes#' + a['fingerprint'])})"
+            for a, amount in levers
+        )
+        improved = base_ebe + gains
+        lines.append(f"Améliorations détectées et chiffrées : {names}.")
+        lines.append(
+            f"Année {nxt}, avec ces améliorations menées dès janvier : EBE "
+            f"{c.fact('fc_next_ebe_plus', f'Prévision de l’EBE {nxt} avec les améliorations', improved, quality='hypothesis', source='EBE prévu sans changement + gains des améliorations')}, "
+            f"soit {c.fact('fc_next_gain', f'Gain d’EBE {nxt} des améliorations', gains, quality='estimated', source='somme des améliorations, sans double comptage')} de plus "
+            f"(marge de {c.fact('fc_next_pct_plus', f'Prévision de la marge d’EBE {nxt} avec les améliorations', _ratio(improved, base_rev), 'pct', quality='hypothesis')})."
+        )
+    covers = sum((ctx.m(k).covers for k in last12), 0)
+    if covers:
+        lines.append(
+            f"Décision tarifaire en plus, si vous la prenez : +1 € TTC par couvert à fréquentation égale ajouterait "
+            f"{c.fact('price_lever', 'Gain annuel d’une hausse de 1 € TTC par couvert', D(covers) / D('1.1'), quality='hypothesis', source='couverts sur 12 mois × 1 € ÷ 1,10 (TVA)')} d'EBE."
+        )
+    lines.append(
+        "Ce sont des estimations : elles supposent une saisonnalité semblable, aucun événement exceptionnel, "
+        "et des améliorations effectivement mises en œuvre. À revoir chaque mois avec les chiffres réels."
+    )
+    c.section("Prévision annuelle", lines)
 
 
 def treasury(c: Composer, ctx: Context, **_: Any) -> None:
@@ -629,6 +742,7 @@ TOOLS = {
     "profit_change": profit_change,
     "compare_months": compare_months,
     "year_summary": year_summary,
+    "forecast": forecast,
     "treasury": treasury,
     "investment_capacity": investment_capacity,
     "top_charges": top_charges,
